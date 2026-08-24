@@ -1,0 +1,30 @@
+name: CI
+#
+# 이 저장소 자신의 무결성 검사.
+#
+# 여기의 워크플로는 다른 저장소들이 `uses:` 로 부른다 — 문법이 깨지면
+# 호출하는 쪽이 전부 깨진다. 그래서 자기 워크플로를 스스로 린트한다.
+#
+# 잡 이름이 `integrity` 인 것은 우연이 아니다: 룰셋의
+# required_status_checks 가 이 이름을 요구한다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 다이제스트로 핀한다 — 태그(1.7.12)는 가변이다.
+      - name: 워크플로 문법·사용법 검사
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color

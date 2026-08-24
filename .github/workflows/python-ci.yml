@@ -1,0 +1,67 @@
+name: python-ci
+#
+# 재사용 워크플로 — 호출부는 각 저장소에 5줄로 남는다:
+#
+#   jobs:
+#     ci:
+#       uses: coolbress/workflows/.github/workflows/python-ci.yml@<commit-sha>
+#
+# 왜 4개 잡으로 쪼개는가: 산출물 바닥이 lint·typecheck·test·build 를
+# **각각 별도 required check** 로 요구한다 (direction/05 §CI/CD).
+# 한 잡에 4스텝으로 넣으면 첫 실패에서 멈춰 나머지 3개의 상태를 알 수 없고,
+# 룰셋이 개별 검사를 요구할 수도 없다.
+#
+# Actions 는 커밋 SHA 로 핀한다 — 태그는 가변이라 공급망 벡터다
+# (corpus/aspects/04 foundation-floor-artifact-checklist: MUST).
+# 인라인 주석의 버전은 핀된 SHA 가 가리키는 태그다.
+
+on:
+  workflow_call:
+
+# 기본 토큰은 write-broad 다. 최소로 내린다 (같은 체크리스트: MUST).
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      # --locked: 락파일이 없거나 pyproject 와 어긋나면 실패한다.
+      # 락파일 커밋은 바닥의 MUST 이므로 검사가 아니라 전제로 둔다.
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run mypy .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run pytest
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv build
