@@ -72,6 +72,25 @@ ci / lint        ci / typecheck        ci / test        ci / build
 
 로직은 9줄이다. 늘어나면 설정 층에 로직이 새고 있다는 신호다.
 
+## `/kickoff` — 아이디어를 과제로
+
+`commands/kickoff.md` 는 Claude Code 슬래시 커맨드다. 한 번 걸어둔다:
+
+```bash
+mkdir -p ~/.claude/commands
+ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
+```
+
+**심볼릭 링크인 이유**: 커맨드 본문이 이 저장소에 살아야 벽 안에서 버전 관리되고,
+`git pull` 만으로 갱신이 전파된다. `~/.claude/` 에 사본을 두면 어느 쪽이 최신인지 모르게 된다.
+
+인터뷰는 아이디어를 **인수기준이 검사에 매핑된 GitHub 이슈**로 바꾼다.
+근거는 `coolbress/standards` 의 `corpus/aspects/01-requirements-planning/elicitation-interview-build-standard.md`
+(Mom Test · 정보이득 질문 선택 · EARS · 위험 비례 깊이 8/12/18 · **흔한 실수 목록**).
+
+마지막 항목이 핵심이다 — 실증(RE'25)은 LLM 인터뷰어가 **실수 목록을 쥐고 있을 때만**
+사람보다 나은 후속 질문을 한다는 것을 보였다. 그래서 그 표가 커맨드 안에 들어 있다.
+
 ## 이 저장소 자신
 
 `ci.yml` 이 actionlint 로 자기 워크플로를 검사한다. 여기가 깨지면 부르는 쪽이 전부 깨진다.
