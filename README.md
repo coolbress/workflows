@@ -72,6 +72,23 @@ ci / lint        ci / typecheck        ci / test        ci / build
 
 로직은 9줄이다. 늘어나면 설정 층에 로직이 새고 있다는 신호다.
 
+### 공개 여부와 라이선스는 인자로 받는다
+
+```bash
+./new-project.sh myapp                              # 공개 · MIT (기본)
+./new-project.sh myapp --license=apache-2.0         # 공개 · Apache-2.0
+./new-project.sh myapp --private                    # ⚠️ 아래 참조
+```
+
+🔴 **비공개 + GitHub Free 면 룰셋이 걸리지 않는다.** GitHub 이 직접 그렇게 답한다 —
+*"Upgrade to GitHub Pro or make this repository public to enable this feature."*
+
+그래서 이 스크립트는 **답을 믿지 않고 실제로 걸어본다.** 실패하면 **방금 만든 원격 저장소를 지우고 멈춘다** —
+**벽 없는 저장소를 남기지 않는다.** 길은 둘뿐이다: **Pro 로 올린다** 또는 **공개로 만든다**.
+
+라이선스는 **GitHub 공식 라이선스 API 의 본문**을 그대로 쓴다(`/licenses/<spdx>`).
+교체는 **룰셋을 걸기 전에** 한다 — 건 뒤에는 `main` 직접 푸시가 막혀 PR 없이 못 바꾼다.
+
 ## `/kickoff` — 아이디어를 과제로
 
 `commands/kickoff.md` 는 Claude Code 슬래시 커맨드다. 한 번 걸어둔다:
