@@ -28,6 +28,9 @@ trap cleanup EXIT
 gh repo create "coolbress/$name" "$vis" --template coolbress/project-template --clone
 created=1
 
+# 템플릿 자리표시자(app)를 실제 이름으로. 치환 로직은 템플릿이 소유한다 (감사 §6.4).
+( cd "$name" && ./bootstrap.sh "$name" && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환" && git push -q )
+
 # 템플릿은 MIT 를 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
 git -C "$name" diff --quiet || { git -C "$name" commit -qam "chore: 라이선스를 $lic 로 설정"; git -C "$name" push -q; }
