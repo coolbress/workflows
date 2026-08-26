@@ -1,1 +1,6 @@
 .DS_Store
+canary/.venv/
+canary/dist/
+canary/.smoke/
+__pycache__/
+*.py[cod]

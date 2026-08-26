@@ -17,6 +17,14 @@ name: python-ci
 
 on:
   workflow_call:
+    inputs:
+      working-directory:
+        description: |
+          프로젝트 루트. 기본은 저장소 루트다.
+          이 저장소 자신의 canary 잡이 `canary/` 를 넘겨 **실제로 이 워크플로를 호출해** 본다 —
+          YAML 문법이 맞는 것과 워크플로가 도는 것은 다른 문장이기 때문이다.
+        type: string
+        default: "."
 
 # 기본 토큰은 write-broad 다. 최소로 내린다 (같은 체크리스트: MUST).
 permissions:
@@ -25,6 +33,10 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
@@ -38,6 +50,10 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
@@ -48,6 +64,10 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
@@ -58,6 +78,10 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
@@ -65,3 +89,25 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - run: uv build
+
+      # 🔴 `uv build` 는 **파일이 만들어졌다**까지만 증명한다.
+      # 그 파일이 깨끗한 환경에 설치되고 import 되는지는 다른 문장이다 —
+      # 빠지는 패키지 데이터·잘못된 패키지 이름·깨진 메타데이터는 여기서만 잡힌다.
+      - name: 설치 smoke — wheel 과 sdist 를 실제로 설치해 본다
+        run: |
+          set -euo pipefail
+          name="$(uv run python -c 'import tomllib,pathlib;print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["name"])')"
+          for art in dist/*.whl dist/*.tar.gz; do
+            rm -rf .smoke
+            uv venv --quiet .smoke
+            uv pip install --quiet --python .smoke/bin/python "$art"
+            .smoke/bin/python -c 'import importlib.metadata as md,sys; print(sys.argv[1], md.version(sys.argv[1]))' "$name"
+            if [ -d src ]; then
+              for m in src/*/; do
+                m="$(basename "$m")"
+                .smoke/bin/python -c 'import importlib,sys; importlib.import_module(sys.argv[1])' "$m"
+                echo "  import $m ok"
+              done
+            fi
+            echo "  ✅ $art"
+          done

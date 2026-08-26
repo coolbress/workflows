@@ -17,6 +17,13 @@ for a in "$@"; do case "$a" in
   *) echo "모르는 인자: $a" >&2; exit 2 ;;
 esac; done
 
+# 라이선스는 **저장소를 만들기 전에** 확인한다 — 오타 하나로 저장소를 만들었다 지우지 않는다.
+# 그리고 SPDX 식별자(MIT · Apache-2.0)를 여기서 얻어 bootstrap 에 넘긴다.
+if ! spdx="$(gh api "/licenses/$lic" --jq .spdx_id 2>/dev/null)"; then
+  echo "모르는 라이선스: $lic  (예: mit · apache-2.0 · gpl-3.0 — https://api.github.com/licenses)" >&2
+  exit 2
+fi
+
 created=0
 cleanup() {
   [ "$created" = 1 ] || return 0
@@ -28,10 +35,11 @@ trap cleanup EXIT
 gh repo create "coolbress/$name" "$vis" --template coolbress/project-template --clone
 created=1
 
-# 템플릿 자리표시자(app)를 실제 이름으로. 치환 로직은 템플릿이 소유한다 (감사 §6.4).
-( cd "$name" && ./bootstrap.sh "$name" && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환" && git push -q )
+# 템플릿 자리표시자(app)를 실제 이름·라이선스로. 치환 로직은 템플릿이 소유한다 (감사 §생성 방식).
+# bootstrap 은 uv.lock 도 다시 잠근다 — 안 하면 CI 의 `uv sync --locked` 가 첫 PR 부터 실패한다.
+( cd "$name" && ./bootstrap.sh "$name" "$spdx" && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환" && git push -q )
 
-# 템플릿은 MIT 를 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
+# 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
 git -C "$name" diff --quiet || { git -C "$name" commit -qam "chore: 라이선스를 $lic 로 설정"; git -C "$name" push -q; }
 

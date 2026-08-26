@@ -1,0 +1,40 @@
+# canary — 이 저장소의 재사용 워크플로를 **실제로 호출해 보는** 최소 프로젝트.
+#
+# 왜 있나: `actionlint` 는 YAML 이 문법에 맞는지만 본다.
+# 워크플로가 **도는지**는 돌려봐야 안다 — 그리고 돌려보려면 진짜 Python 프로젝트가 있어야 한다.
+# 설정은 project-template 과 같은 엄격도로 맞춘다. 여기가 느슨하면 canary 가 통과해도 의미가 없다.
+[project]
+name = "canary"
+version = "0.0.0"
+description = "재사용 워크플로 canary"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["mypy>=1.14", "pytest>=8.3", "ruff>=0.9"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "S", "A", "C4", "PT", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error"]
