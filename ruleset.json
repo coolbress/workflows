@@ -39,16 +39,20 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "ci / lint"
+            "context": "ci / lint",
+            "integration_id": 15368
           },
           {
-            "context": "ci / typecheck"
+            "context": "ci / typecheck",
+            "integration_id": 15368
           },
           {
-            "context": "ci / test"
+            "context": "ci / test",
+            "integration_id": 15368
           },
           {
-            "context": "ci / build"
+            "context": "ci / build",
+            "integration_id": 15368
           }
         ]
       }
