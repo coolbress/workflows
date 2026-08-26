@@ -105,6 +105,31 @@ ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
 - **`permissions:` 는 최소로.** 기본 토큰은 write-broad 다
 - `main` 은 보호돼 있다 — 브랜치 → PR → CI 초록 → 머지
 
+## 버전 — SemVer 로 태그한다
+
+**이 저장소만 릴리스를 한다** (소유자 결정 2026-08-26 · `standards` 의 `direction/05` §릴리스).
+이유는 하나다 — **여기만 남이 참조하는 쪽**이다:
+
+```yaml
+uses: coolbress/workflows/.github/workflows/python-ci.yml@<SHA>  # v1.0.0
+```
+
+**핀은 반드시 커밋 SHA 로 한다** — 태그는 가변이라 공급망 벡터다(GitHub 자신이 *"only a full-length
+commit SHA is immutable"* 이라 규정한다). **태그는 그 SHA 가 무엇인지 읽기 위한 것**이지 핀 대상이 아니다.
+그래서 위처럼 **SHA 로 핀하고 옆에 버전을 주석으로 적는다.**
+
+| 무엇이 바뀌면 | 올린다 |
+|---|---|
+| **MAJOR** | 호출부가 고쳐야 하는 변경 — **잡 이름**, 필수 입력 추가/제거, 검사 이름(`ci / *`) |
+| **MINOR** | 호환되는 추가 — 새 선택 입력, 새 잡(요구 검사에 안 들어가는), 새 워크플로 파일 |
+| **PATCH** | 동작이 같은 수정 — Action SHA 갱신, 버그 수정, 문서 |
+
+🔴 **잡 이름 변경은 언제나 MAJOR 다.** 검사 이름이 `{호출잡}/{피호출잡}` 이라, 바뀌는 순간
+**소비자의 룰셋이 요구하는 이름이 영원히 보고되지 않고 저장소가 조용히 머지 불가로 잠긴다.**
+위 *"잡 이름 `ci` 를 바꾸지 마라"* 절과 같은 이야기다.
+
+릴리스마다 **GitHub Release 에 변경 요약**을 적는다 — 호출부가 올릴지 말지를 그것만 보고 판단할 수 있게.
+
 ## 근거
 
 설계 근거는 [`coolbress/standards`](https://github.com/coolbress/standards) 가 갖는다:
