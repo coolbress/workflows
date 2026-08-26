@@ -46,6 +46,15 @@ ci / lint        ci / typecheck        ci / test        ci / build
 |---|---|---|
 | `python-ci.yml` | `lint` · `typecheck` · `test` · `build` **4개 별도 검사** | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
 
+**선택 입력** — `working-directory`(기본 `.`). 프로젝트 루트가 저장소 루트가 아닐 때만 쓴다.
+이 저장소의 canary 잡이 이걸로 자기 자신을 호출한다.
+
+### `build` 는 빌드에서 끝나지 않는다 — **설치까지 해 본다**
+
+`uv build` 가 통과했다는 것은 **파일이 만들어졌다**는 말이지 **쓸 수 있다**는 말이 아니다.
+그래서 wheel 과 sdist 를 **깨끗한 venv 에 각각 설치하고 import 까지** 해 본다.
+빠진 패키지 데이터 · 잘못된 패키지 이름 · 깨진 메타데이터는 여기서만 잡힌다.
+
 ### 왜 4개로 쪼갰나
 
 산출물 바닥이 *"lint·typecheck·test·build를 **각각 별도 required check**로"* 를 MUST 로 요구한다.
@@ -113,9 +122,23 @@ ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
 마지막 항목이 핵심이다 — 실증(RE'25)은 LLM 인터뷰어가 **실수 목록을 쥐고 있을 때만**
 사람보다 나은 후속 질문을 한다는 것을 보였다. 그래서 그 표가 커맨드 안에 들어 있다.
 
-## 이 저장소 자신
+## 이 저장소 자신 — **YAML 만 검사하면 절반이다**
 
-`ci.yml` 이 actionlint 로 자기 워크플로를 검사한다. 여기가 깨지면 부르는 쪽이 전부 깨진다.
+여기가 깨지면 부르는 쪽이 **전부** 깨진다. 그런데 이 저장소에서 실행되는 것은 워크플로만이 아니다 —
+`new-project.sh` 는 저장소를 **만들고 지우고**, `ruleset.json` 은 새 저장소의 **벽 그 자체**가 된다.
+`integrity` 잡이 다섯 가지를 본다:
+
+| 검사 | 무엇을 막나 |
+|---|---|
+| `actionlint` | 워크플로 문법·사용법 |
+| `bash -n` | 셸 문법 |
+| `shellcheck` | 셸 정적 결함 |
+| **`tools/check-ruleset.sh`** | **벽이 벽인가** — 우회자 0 · 강제 적용 · squash 전용 · 검사 4종과 **출처(App 15368)** · strict |
+| **`tests/new-project-failpath.sh`** | **fail-closed** — `gh` 를 목으로 바꿔 **모든 단계에서 실패시켜 보고**, 어디서 넘어지든 원격 저장소가 남지 않는지 확인한다 (10 케이스) |
+
+그리고 **`canary` 잡이 `python-ci.yml` 을 실제로 호출한다.**
+`actionlint` 가 통과한 것과 **워크플로가 도는 것**은 다른 문장이라서다 —
+소비자가 깨지기 전에 [`canary/`](canary/) 의 최소 프로젝트에서 먼저 깨진다.
 
 **이 저장소의 룰셋은 `ruleset.json` 과 다르다.** 여기 `integrity` 잡은 재사용 호출이 아니라
 평범한 잡이라 체크 이름이 그냥 `integrity` 다. `ruleset.json` 은 **재사용 워크플로를 부르는
@@ -156,4 +179,4 @@ commit SHA is immutable"* 이라 규정한다). **태그는 그 SHA 가 무엇�
 
 설계 근거는 [`coolbress/standards`](https://github.com/coolbress/standards) 가 갖는다:
 `corpus/aspects/04-build-ci-engineering/` (재사용 층의 경계 · 바닥 체크리스트) ·
-`direction/04-the-plan.md` (만들 것 ②) · `direction/05-the-output-floor.md` (MUST 49).
+`direction/04-the-plan.md` (만들 것 ②) · `direction/05-the-output-floor.md` (산출물 바닥 12묶음).

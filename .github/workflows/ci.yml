@@ -17,9 +17,15 @@ on:
 permissions:
   contents: read
 
+# PR 에 새로 푸시하면 이전 실행을 취소한다. main 은 취소하지 않는다.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   integrity:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -28,3 +34,28 @@ jobs:
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
         with:
           args: -color
+
+      # 🔴 여기까지는 YAML 만 봤다. 이 저장소의 나머지도 전부 실행 코드다 —
+      # new-project.sh 는 저장소를 만들고 지우고, ruleset.json 은 새 저장소의 벽이 된다.
+      # 검사하지 않으면 "중앙에 하나 있으니 안전하다"가 근거 없는 말이 된다.
+      - name: 셸 문법 (bash -n)
+        run: bash -n new-project.sh tools/*.sh tests/*.sh
+
+      - name: 셸 정적 검사 (shellcheck)
+        run: shellcheck new-project.sh tools/*.sh tests/*.sh
+
+      - name: 룰셋 불변식 — 벽이 벽인가
+        run: ./tools/check-ruleset.sh ruleset.json
+
+      # gh 를 목으로 바꿔 **모든 단계에서 실패시켜 본다.**
+      # 지켜야 할 성질은 하나다: 어디서 넘어져도 벽 없는 원격 저장소를 남기지 않는다.
+      - name: 생성 스크립트 실패 경로
+        run: ./tests/new-project-failpath.sh
+
+  # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
+  # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
+  # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
+  canary:
+    uses: ./.github/workflows/python-ci.yml
+    with:
+      working-directory: canary
