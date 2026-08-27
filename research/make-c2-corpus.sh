@@ -117,3 +117,69 @@ def s9_literal(expr: str):                                        # 9'. literal_
 PY
 
 echo "코퍼스 생성: $out (vulnerable.py · safe.py)"
+
+# ── 3번째 파일 — 같은 9종을 **신뢰할 수 없는 입력의 출발점**에서 이어 붙인 판 ──
+#
+# 왜 따로 있나: 1차 측정에서 CodeQL 이 1건만 잡았는데 **못 잡아서가 아니라
+# 출발점(source)이 없어서**였다. CodeQL 의 주력 질의는 **데이터흐름 추적**이라
+# "이 값이 밖에서 왔다" 가 성립해야 경보를 낸다. 패턴 기반 규칙과 근본이 다른 지점이고,
+# 그 차이를 안 만들어 놓고 비교하면 **측정이 도구를 오해하게 만든다.**
+cat > "$out/web.py" <<'WEBPY'
+"""9종을 flask.request 에서 흘려보낸 판. 여기서 잡히면 TP."""
+import hashlib
+import os
+import pickle
+import sqlite3
+import subprocess
+
+import requests
+import yaml
+from flask import Flask, request
+
+app = Flask(__name__)
+
+
+@app.route("/w1")
+def w1_sql():                                                     # 1. SQL 주입
+    conn = sqlite3.connect("app.db")
+    name = request.args["name"]
+    return str(conn.execute("SELECT * FROM users WHERE name = '%s'" % name).fetchall())
+
+
+@app.route("/w2")
+def w2_command():                                                 # 2. 명령 주입
+    return subprocess.check_output("ping -c1 " + request.args["host"], shell=True)
+
+
+@app.route("/w3")
+def w3_pickle():                                                  # 3. 역직렬화
+    return str(pickle.loads(request.get_data()))
+
+
+@app.route("/w4")
+def w4_path():                                                    # 4. 경로 순회
+    with open(os.path.join("/var/data", request.args["name"])) as f:
+        return f.read()
+
+
+@app.route("/w5")
+def w5_hash():                                                    # 5. 약한 해시
+    return hashlib.md5(request.args["password"].encode()).hexdigest()
+
+
+@app.route("/w7")
+def w7_ssrf():                                                    # 7. SSRF
+    return requests.get(request.args["url"], timeout=5).text
+
+
+@app.route("/w8")
+def w8_yaml():                                                    # 8. 안전하지 않은 YAML
+    return str(yaml.load(request.get_data(), Loader=yaml.Loader))
+
+
+@app.route("/w9")
+def w9_eval():                                                    # 9. eval
+    return str(eval(request.args["expr"]))
+WEBPY
+
+echo "  + web.py (flask 출발점 판)"
