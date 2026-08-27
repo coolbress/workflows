@@ -118,6 +118,18 @@ run() { # 단계 · 기대 종료(ok|err) · 지움을 기대하나(yes|no)
 
 echo "new-project.sh 실패 경로 — 어디서 넘어져도 벽 없는 저장소를 남기지 않는가"
 
+# 저장소 안에서 만들면 저장소 안에 저장소가 생긴다. **만들기 전에** 멈춰야 한다.
+printf '  '
+export GH_LOG="$work/nested.log"; : > "$GH_LOG"
+nested="$work/nested"; mkdir -p "$nested" && ( cd "$nested" && "$REAL_GIT" init -q -b main )
+if out=$( cd "$nested" && "$root/new-project.sh" probe 2>&1 ); then
+  printf '🔴 %-12s 저장소 안에서도 통과했다\n' "nested"; fail=$((fail+1))
+elif printf '%s' "$out" | grep -q "git 저장소 안이다"; then
+  printf '✅ %-12s 저장소 안에서는 멈춘다\n' "nested"; pass=$((pass+1))
+else
+  printf '🔴 %-12s 다른 이유로 실패했다\n' "nested"; printf '%s\n' "$out"|tail -2; fail=$((fail+1))
+fi
+
 # --private 는 지원하지 않는다. **저장소를 만들기 전에** 멈춰야 한다 —
 # 받는 척하고 중간에 실패하면 만들었다 지우는 낭비가 된다.
 printf '  '

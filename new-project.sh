@@ -38,6 +38,23 @@ EOF
   *) echo "모르는 인자: $a" >&2; exit 2 ;;
 esac; done
 
+# 🔴 저장소 안에서 만들면 **저장소 안에 저장소**가 생긴다.
+# `gh repo create --clone` 은 **현재 폴더**에 복제한다 — `~/workflows` 에서 돌리면
+# `~/workflows/divcal` 이 되고, 바깥 저장소가 그걸 추적하려 든다.
+# 문서로 *"홈에서 돌리세요"* 라고 적는 대신 **여기서 막는다.**
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  root="$(git rev-parse --show-toplevel)"
+  cat >&2 <<EOF
+🔴 여기는 git 저장소 안이다: $root
+
+  \`gh repo create --clone\` 은 **현재 폴더**에 복제하므로 저장소 안에 저장소가 생긴다.
+  프로젝트를 둘 폴더에서 다시 돌려라. 예:
+
+    cd ~ && $here/tools/with-admin-token.sh $here/new-project.sh $name${*:+ $*}
+EOF
+  exit 2
+fi
+
 # 라이선스는 **저장소를 만들기 전에** 확인한다 — 오타 하나로 저장소를 만들었다 지우지 않는다.
 # 그리고 SPDX 식별자(MIT · Apache-2.0)를 여기서 얻어 bootstrap 에 넘긴다.
 if ! spdx="$(gh api "/licenses/$lic" --jq .spdx_id 2>/dev/null)"; then
