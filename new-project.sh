@@ -58,7 +58,14 @@ created=1
 
 # 템플릿 자리표시자(app)를 실제 이름·라이선스로. 치환 로직은 템플릿이 소유한다 (감사 §생성 방식).
 # bootstrap 은 uv.lock 도 다시 잠근다 — 안 하면 CI 의 `uv sync --locked` 가 첫 PR 부터 실패한다.
-( cd "$name" && ./bootstrap.sh "$name" "$spdx" && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환" && git push -q )
+# 치환이 끝나면 **생성기 자신을 지운다.** 남겨 두면 모든 프로젝트가
+# 앞으로 쓰지 않을 일회용 스크립트와 그 시험을 영원히 들고 다닌다
+# (그리고 CI 가 매번 그 시험을 돈다). 대전제 2 — 작고 가볍게.
+( cd "$name" \
+  && ./bootstrap.sh "$name" "$spdx" \
+  && git rm -q bootstrap.sh tests/test_bootstrap_name.py \
+  && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환 (생성기 제거)" \
+  && git push -q )
 
 # 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
