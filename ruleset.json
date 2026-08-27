@@ -53,6 +53,14 @@
           {
             "context": "ci / build",
             "integration_id": 15368
+          },
+          {
+            "context": "ci / secrets",
+            "integration_id": 15368
+          },
+          {
+            "context": "CodeQL",
+            "integration_id": 57789
           }
         ]
       }

@@ -28,6 +28,7 @@ case "$all" in
   "repo delete"*)           step=delete ;;
   *"/licenses/"*.spdx_id*) step=license-check ;;
   *"/licenses/"*)           step=license ;;
+  *code-scanning*)          step=codeql ;;
   *"/rulesets"*)            step=ruleset ;;
   *security_and_analysis*)  step=secret ;;
   *vulnerability-alerts*)   step=dependabot ;;
@@ -121,6 +122,7 @@ run create        err no
 # 생긴 *뒤* 는 어느 단계에서 넘어지든 지운다.
 run push       err yes
 run license    err yes
+run codeql     err yes
 run ruleset    err yes
 run secret     err yes
 run dependabot err yes

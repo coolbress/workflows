@@ -51,13 +51,23 @@ chk '머지는 squash 뿐' \
 # 이름은 {호출잡}/{피호출잡} 이다. 호출부 잡 이름 `ci` + 재사용 워크플로의 4잡.
 # 여기와 project-template/.github/workflows/ci.yml 과 python-ci.yml 이
 # 셋 다 맞아야 성립한다 — 하나만 이름이 바뀌면 저장소가 머지 불가로 잠긴다.
-chk '요구하는 검사는 lint·typecheck·test·build' \
+chk '요구하는 검사는 lint·typecheck·test·build·secrets·CodeQL' \
     '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context]' \
-    '["ci / lint","ci / typecheck","ci / test","ci / build"]'
+    '["ci / lint","ci / typecheck","ci / test","ci / build","ci / secrets","CodeQL"]'
 # 이름만 요구하면 아무나 그 이름으로 초록을 올릴 수 있다. 출처를 고정한다.
-chk '검사 출처는 전부 GitHub Actions App(15368)' \
-    '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].integration_id]|unique' \
+# 🔴 출처가 **둘**이다 — `ci / *` 는 GitHub Actions(15368), `CodeQL` 은
+# code scanning(57789 · github-advanced-security). 하나로 뭉뚱그리면 안 된다.
+chk 'Actions 검사의 출처는 GitHub Actions App(15368)' \
+    '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[]|select(.context|startswith("ci / ")).integration_id]|unique' \
     '[15368]'
+chk 'CodeQL 의 출처는 code scanning App(57789)' \
+    '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[]|select(.context=="CodeQL").integration_id]|unique' \
+    '[57789]'
+# ⚠️ 언어별 잡(`Analyze (python)` 등)은 **요구하지 않는다** — 저장소마다 언어가 달라서
+# 없는 언어를 요구하면 그 이름이 영원히 보고되지 않아 저장소가 잠긴다. 집계 검사 하나만 쓴다.
+chk '언어별 Analyze 잡은 요구하지 않는다' \
+    '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context|select(startswith("Analyze"))]|length' \
+    '0'
 chk '낡은 main 위의 초록은 인정하지 않는다 (strict)' \
     '.rules[]|select(.type=="required_status_checks").parameters.strict_required_status_checks_policy' 'true'
 
