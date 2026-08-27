@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0   # 히스토리까지 본다 — 푸시 보호가 놓친 것은 과거에도 있을 수 있다
+          fetch-depth: 0   # 히스토리까지 본다 — 아래 `gitleaks git` 이 이걸 필요로 한다
       # actionlint 과 같은 방식: 공식 릴리스 + SHA256. `uses:` 가 아니라 allowlist 를 막지 않는다.
       - name: gitleaks 설치 — 공식 릴리스 + SHA256 검증
         env:
@@ -103,9 +103,12 @@ jobs:
           echo "${GITLEAKS_SHA256}  $d/$f" | sha256sum -c -
           tar -xzf "$d/$f" -C "$d" gitleaks
           echo "$d" >> "$GITHUB_PATH"
-      - name: 시크릿 탐지
+      # 🔴 `dir` 이 아니라 `git` 이다. `dir` 은 **현재 파일만** 본다 —
+      # `fetch-depth: 0` 으로 히스토리를 받아 놓고 `dir` 로 훑으면 히스토리는 안 본 것이고,
+      # **주석만 히스토리를 본다고 말하는 상태**가 된다. 지워진 시크릿은 지워도 히스토리에 남는다.
+      - name: 시크릿 탐지 — 히스토리 포함
         working-directory: ${{ inputs.working-directory }}
-        run: gitleaks dir . --no-banner --redact
+        run: gitleaks git . --no-banner --redact
 
   build:
     runs-on: ubuntu-latest

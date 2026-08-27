@@ -42,17 +42,21 @@ ci / lint        ci / typecheck        ci / test        ci / build
 ⚠️ **언어별 잡(`Analyze (python)` 등)은 요구하지 않는다.** 저장소마다 언어가 달라서
 없는 언어를 요구하면 같은 형태로 잠긴다. **집계 검사 하나만** 쓴다.
 
-**호출잡 이름을 바꾸면 네 검사가 전부 다른 이름으로 보고되고, 룰셋이 요구하는 이름은
+**호출잡 이름을 바꾸면 `ci / *` 검사가 전부 다른 이름으로 보고되고, 룰셋이 요구하는 이름은
 영원히 보고되지 않는다 — 저장소가 머지 불가 상태로 조용히 잠긴다.** 검사는 초록인데
 머지 버튼은 막혀 있는 형태라 원인을 찾기 어렵다.
 
-바꾸려면 `ruleset.json` 의 네 context 를 같이 바꾼다.
+바꾸려면 [`ruleset.json`](ruleset.json) 의 `ci / *` context 를 같이 바꾼다. **개수는 여기 적지 않는다** — 그 파일이 정본이다.
 
 ## 있는 것
 
 | 워크플로 | 검사 | 전제 |
 |---|---|---|
-| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` **4개 별도 검사** + `secrets` | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` · `secrets` — **각각 별도 검사** | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+
+> ⚠️ **개수를 문장에 반복하지 않는다.** 요구되는 검사의 정본은 [`ruleset.json`](ruleset.json) 하나이고,
+> `tools/check-ruleset.sh` 가 그 목록을 불변식으로 지킨다. 예전에 *"네 검사"* 가 문서 여러 곳에
+> 박혀 있다가 다섯이 되면서 **문서마다 숫자가 달라졌다.**
 
 ### 🔍 `secrets` — 푸시 보호와 **겹치는 게 아니라 다른 것을 잡는다**
 
@@ -105,8 +109,14 @@ env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh          coolbress/<r
 ## 새 프로젝트 만들기
 
 ```bash
-./new-project.sh <이름>
+./new-project.sh <이름>              # 공개 · MIT
+./new-project.sh <이름> --license=apache-2.0
 ```
+
+🔴 **`--private` 는 아직 지원하지 않는다.** 받는 척하지 않고 **시작 전에 멈춘다** —
+① Free 는 비공개에 룰셋을 못 걸고 ② 룰셋이 요구하는 `CodeQL` 은 비공개에서
+`GitHub Code Security` 라이선스가 필요하다. 정본의 결정(*비공개 → Semgrep OSS*)은
+**아직 구현되지 않았다.**
 
 세 가지를 한다 — **손으로 하면 빠뜨리는 것만**:
 
@@ -121,19 +131,7 @@ env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh          coolbress/<r
 **fail-closed**: 어느 단계에서 실패하든 **원격 저장소를 남기지 않는다.** 벽 없는 저장소가 남는 것이
 이 프로젝트가 죽는 방식이기 때문이다.
 
-### 공개 여부와 라이선스는 인자로 받는다
-
-```bash
-./new-project.sh myapp                              # 공개 · MIT (기본)
-./new-project.sh myapp --license=apache-2.0         # 공개 · Apache-2.0
-./new-project.sh myapp --private                    # ⚠️ 아래 참조
-```
-
-🔴 **비공개 + GitHub Free 면 룰셋이 걸리지 않는다.** GitHub 이 직접 그렇게 답한다 —
-*"Upgrade to GitHub Pro or make this repository public to enable this feature."*
-
-그래서 이 스크립트는 **답을 믿지 않고 실제로 걸어본다.** 실패하면 **방금 만든 원격 저장소를 지우고 멈춘다** —
-**벽 없는 저장소를 남기지 않는다.** 길은 둘뿐이다: **Pro 로 올린다** 또는 **공개로 만든다**.
+### 라이선스는 인자로 받는다
 
 라이선스는 **GitHub 공식 라이선스 API 의 본문**을 그대로 쓴다(`/licenses/<spdx>`).
 교체는 **룰셋을 걸기 전에** 한다 — 건 뒤에는 `main` 직접 푸시가 막혀 PR 없이 못 바꾼다.
