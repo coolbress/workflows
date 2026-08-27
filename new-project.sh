@@ -60,8 +60,15 @@ gh api "repos/coolbress/$name" -X PATCH \
   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled' >/dev/null
 gh api -X PUT "repos/coolbress/$name/vulnerability-alerts"
 gh api -X PUT "repos/coolbress/$name/automated-security-fixes"
-# Actions: 서버에서도 커밋 SHA 핀을 강제한다 (파일 습관만으로는 부족하다).
-gh api -X PUT "repos/coolbress/$name/actions/permissions" -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+# Actions: 서버가 **두 가지를 따로** 강제한다 — 무엇이 바뀌지 않는가(SHA 핀)와
+# 무엇이 돌 수 있는가(allowlist). 파일 습관만으로는 둘 다 부족하다.
+# 🔴 이전 판은 `allowed_actions=all` 이었다 — 새 저장소만 allowlist 없이 태어나서
+# `repo_audit` 이 즉시 drift 로 잡았다. **생성기와 감사기의 기대값이 달랐다.**
+gh api -X PUT "repos/coolbress/$name/actions/permissions" -F enabled=true -f allowed_actions=selected -F sha_pinning_required=true
+# 허용 목록: GitHub 소유(actions/*, github/*) + 재사용 워크플로가 쓰는 setup-uv.
+# 같은 소유자의 재사용 워크플로 자체는 allowlist 대상이 아니다.
+gh api -X PUT "repos/coolbress/$name/actions/permissions/selected-actions" \
+  -F github_owned_allowed=true -F verified_allowed=false -f 'patterns_allowed[]=astral-sh/setup-uv@*' 
 # 머지 방법을 룰셋 의도와 맞춘다.
 gh api -X PATCH "repos/coolbress/$name" -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true >/dev/null
 
