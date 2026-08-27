@@ -76,6 +76,37 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest
 
+  # 🔍 시크릿 탐지 — **푸시 보호와 겹치는 게 아니라 다른 것을 잡는다.**
+  # 실측(standards: audit/SECRET-DETECTION-OVERLAP): 푸시 보호는 **공급자 형식만** 막고
+  # **개인키 PEM 과 일반 시크릿은 통과시킨다.** gitleaks 는 개인키 1/1 · 공급자 6/6 을 잡았다.
+  # ⚠️ 다만 이건 **벽이 아니라 검사**다 — 여기까지 왔다는 건 시크릿이 **이미 GitHub 에 올라갔다**는 뜻이다.
+  # 막는 것은 푸시 보호이고, 이건 **머지를 막고 알린다.**
+  # uv 를 안 쓰므로 별도 잡이다 — 그리고 별도여야 "lint 실패" 가 아니라 "시크릿" 으로 읽힌다.
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # 히스토리까지 본다 — 푸시 보호가 놓친 것은 과거에도 있을 수 있다
+      # actionlint 과 같은 방식: 공식 릴리스 + SHA256. `uses:` 가 아니라 allowlist 를 막지 않는다.
+      - name: gitleaks 설치 — 공식 릴리스 + SHA256 검증
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/gitleaks"; mkdir -p "$d"
+          f="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$d/$f" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$f"
+          echo "${GITLEAKS_SHA256}  $d/$f" | sha256sum -c -
+          tar -xzf "$d/$f" -C "$d" gitleaks
+          echo "$d" >> "$GITHUB_PATH"
+      - name: 시크릿 탐지
+        working-directory: ${{ inputs.working-directory }}
+        run: gitleaks dir . --no-banner --redact
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
