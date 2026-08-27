@@ -130,11 +130,27 @@ ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
 
 | 검사 | 무엇을 막나 |
 |---|---|
-| `actionlint` | 워크플로 문법·사용법 |
+| `actionlint` | 워크플로 문법·사용법 — **공식 릴리스 바이너리 + SHA256 검증**(아래) |
 | `bash -n` | 셸 문법 |
 | `shellcheck` | 셸 정적 결함 |
 | **`tools/check-ruleset.sh`** | **벽이 벽인가** — 우회자 0 · 강제 적용 · squash 전용 · 검사 4종과 **출처(App 15368)** · strict |
 | **`tests/new-project-failpath.sh`** | **fail-closed** — `gh` 를 목으로 바꿔 **모든 단계에서 실패시켜 보고**, 어디서 넘어지든 원격 저장소가 남지 않는지 확인한다 (10 케이스) |
+
+### 🔴 actionlint 를 `docker://` 로 쓰지 않는 이유
+
+그 형태가 **두 번 값을 치렀다**:
+
+| 층 | 무엇이 안 됐나 |
+|---|---|
+| **Actions allowlist** | 패턴에 `docker://` 가 안 들어가 **이 저장소만 allowlist 를 못 걸었다**(`startup_failure`) |
+| **의존성 그래프** | SBOM 에 안 잡혀 **경보도 Dependabot 갱신 PR 도 오지 않았다** |
+
+`rhysd/actionlint` 에는 **공식 Action 이 없다**(Docker 이미지뿐이다).
+제3자 래퍼를 **중앙 저장소**에 들이는 대신 **공식 릴리스 바이너리를 SHA256 으로 검증해** 쓴다 —
+다이제스트 핀과 같은 보장(바뀌면 실패)을 주면서 allowlist 를 막지 않는다.
+
+⚠️ **의존성 그래프는 여전히 못 본다.** 감수한다 — 린터는 **CI 안에서만 돌고 산출물에 섞이지 않는다.**
+대신 **버전과 체크섬을 한 줄에 같이 둬서** 올릴 때 둘을 함께 바꾸게 만들었다.
 
 그리고 **`canary` 잡이 `python-ci.yml` 을 실제로 호출한다.**
 `actionlint` 가 통과한 것과 **워크플로가 도는 것**은 다른 문장이라서다 —
