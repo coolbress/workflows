@@ -73,6 +73,24 @@ trap cleanup EXIT
 gh repo create "coolbress/$name" "$vis" --template coolbress/project-template --clone
 created=1
 
+# 🔴 **푸시가 되는지 맨 앞에서 확인한다.** bootstrap(uv lock·sync)까지 다 하고 나서
+# 알면 늦다 — 실제로 두 번 그렇게 실패했다(2026-08-27: 붙여넣기에 딸려온 공백 한 칸.
+# API 는 헤더라 서버가 잘라내서 통과했고, git push 는 HTTP Basic 이라 base64 안에 남아 거부됐다).
+probe="__push-probe"
+if ! err="$( cd "$name" && git push -q origin "HEAD:refs/heads/$probe" 2>&1 )"; then
+  cat >&2 <<EOF
+🔴 푸시 권한이 없다. 저장소는 만들었지만 아무것도 올릴 수 없다.
+
+$err
+
+확인할 것:
+  · 관리자 토큰에 **repo** 스코프가 있나
+  · 붙여넣을 때 **공백이 딸려오지 않았나** — 래퍼가 길이를 찍는다 (classic 은 40)
+EOF
+  exit 1
+fi
+( cd "$name" && git push -q origin --delete "$probe" ) || true
+
 # 템플릿 자리표시자(app)를 실제 이름·라이선스로. 치환 로직은 템플릿이 소유한다 (감사 §생성 방식).
 # bootstrap 은 uv.lock 도 다시 잠근다 — 안 하면 CI 의 `uv sync --locked` 가 첫 PR 부터 실패한다.
 # 치환이 끝나면 **생성기 자신을 지운다.** 남겨 두면 모든 프로젝트가
