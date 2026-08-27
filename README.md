@@ -110,9 +110,16 @@ ci / lint        ci / typecheck        ci / test        ci / build
 ## 새 프로젝트 만들기
 
 ```bash
-./tools/with-admin-token.sh ./new-project.sh <이름>              # 공개 · MIT
-./tools/with-admin-token.sh ./new-project.sh <이름> --license=apache-2.0
+cd ~                                    # 🔴 저장소 밖에서. 아래 참조
+~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름>
+~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름> --license=apache-2.0
 ```
+
+🔴 **저장소 안에서 돌리면 멈춘다.** `gh repo create --clone` 은 **현재 폴더**에 복제하므로
+`~/workflows` 에서 돌리면 `~/workflows/<이름>` — **저장소 안에 저장소**가 된다.
+문서로 당부하는 대신 **스크립트가 막는다.**
+
+⚠️ **기본은 공개 · MIT 다.** 다른 라이선스면 `--license=<spdx>` 를 준다.
 
 🔒 관리자 권한이 필요하고 **관리자 토큰은 이 컴퓨터에 저장돼 있지 않다.** 래퍼가 물어본다 —
 🔴 **`GH_TOKEN=... ./new-project.sh` 처럼 명령줄에 쓰지 마라. 히스토리에 남는다.**
