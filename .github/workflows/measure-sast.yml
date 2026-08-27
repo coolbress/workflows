@@ -1,0 +1,98 @@
+name: measure-sast
+#
+# C-2 — **CodeQL vs Semgrep OSS** 를 같은 코퍼스에, 같은 run 에서 잰다.
+#
+# 왜: 만들 것 ⑫ 가 "SAST + 시크릿 탐지" 인데 **엔진이 미정**이다.
+# 🟢 제약은 이미 확인됐다(`FFA-008` — 비공개는 GitHub Code Security 라이선스 필요).
+# 🔴 하지만 *"그러니 Semgrep"* 은 근거가 아니라 소거법이다 — **탐지율·오탐이 미조사**였다.
+#
+# 코퍼스는 **커밋하지 않는다.** research/make-c2-corpus.sh 가 런타임에 만든다.
+# 심은 것 9종 + 같은 일을 안전하게 한 쌍둥이 파일(여기서 나온 경보 = 오탐).
+#
+# 결과는 저장소 경보로 **올리지 않는다**(`upload: false`) — 측정이지 운영이 아니다.
+# 이 워크플로는 연구용이라 main 에 들어가지 않는다.
+
+on:
+  push:
+    branches: ["research/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 코퍼스 생성
+        run: ./research/make-c2-corpus.sh "$GITHUB_WORKSPACE/c2corpus"
+      - uses: github/codeql-action/init@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          languages: python
+          queries: security-extended
+      - uses: github/codeql-action/analyze@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          upload: false
+          output: sarif
+      - name: 결과 요약
+        run: |
+          set -euo pipefail
+          echo "== CodeQL =="
+          python3 - <<'PY'
+          import glob, json, collections
+          hits = collections.Counter()
+          for f in glob.glob("sarif/*.sarif"):
+              d = json.load(open(f))
+              for run in d["runs"]:
+                  rules = {r["id"]: r for r in run.get("tool", {}).get("driver", {}).get("rules", [])}
+                  for r in run.get("results", []):
+                      loc = r["locations"][0]["physicalLocation"]
+                      path = loc["artifactLocation"]["uri"]
+                      line = loc["region"]["startLine"]
+                      if "c2corpus" not in path:
+                          continue
+                      hits[path.split("/")[-1]] += 1
+                      print(f"{path}:{line}  {r['ruleId']}")
+          print("합계", dict(hits))
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-sarif
+          path: sarif/
+
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 코퍼스 생성
+        run: ./research/make-c2-corpus.sh "$GITHUB_WORKSPACE/c2corpus"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Semgrep OSS — 기본 python 규칙집
+        run: |
+          set -euo pipefail
+          uvx --from semgrep semgrep --version
+          uvx --from semgrep semgrep scan \
+            --config=p/python --config=p/secrets \
+            --json --output=semgrep.json --no-git-ignore --metrics=off c2corpus || true
+      - name: 결과 요약
+        run: |
+          set -euo pipefail
+          echo "== Semgrep OSS =="
+          python3 - <<'PY'
+          import json, collections
+          d = json.load(open("semgrep.json"))
+          hits = collections.Counter()
+          for r in d.get("results", []):
+              p = r["path"]
+              hits[p.split("/")[-1]] += 1
+              print(f"{p}:{r['start']['line']}  {r['check_id']}")
+          print("합계", dict(hits))
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semgrep-json
+          path: semgrep.json
