@@ -54,6 +54,8 @@ case "$step" in
       # `git diff --quiet` 가 라이선스 교체를 감지한다 (실제와 같은 조건).
       printf 'MIT\n' > LICENSE
       printf 'name = "app"\n' > pyproject.toml
+      # 실물 템플릿과 같은 구성 — new-project.sh 가 생성기를 지우므로 지울 대상이 있어야 한다
+      mkdir -p tests && printf '# 생성기 시험\n' > tests/test_bootstrap_name.py
       cat > bootstrap.sh <<'BS'
 #!/usr/bin/env bash
 set -euo pipefail
