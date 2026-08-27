@@ -44,7 +44,20 @@ ci / lint        ci / typecheck        ci / test        ci / build
 
 | 워크플로 | 검사 | 전제 |
 |---|---|---|
-| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` **4개 별도 검사** | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` **4개 별도 검사** + `secrets` | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+
+### 🔍 `secrets` — 푸시 보호와 **겹치는 게 아니라 다른 것을 잡는다**
+
+| 부류 | GitHub 푸시 보호 | gitleaks |
+|---|---|---|
+| 공급자 형식(AWS·GH PAT·Slack·Stripe…) | 🔒 **차단** | ✅ 6/6 |
+| **개인키 PEM** | 🔴 **통과시킨다** | ✅ 1/1 |
+| 일반 시크릿(패스프레이즈·JWT·basic-auth URL) | 🔴 **통과시킨다** | 🟡 2/5 |
+
+실측은 `coolbress/standards` 의 `audit/SECRET-DETECTION-OVERLAP.ko.md` 에 있다.
+
+⚠️ **이건 벽이 아니라 검사다.** 여기까지 왔다는 것은 시크릿이 **이미 GitHub 에 올라갔다**는 뜻이다 —
+**막는 것은 푸시 보호**이고, 이 잡은 **머지를 막고 알린다.** 둘 다 있어야 하는 이유가 그것이다.
 
 **선택 입력** — `working-directory`(기본 `.`). 프로젝트 루트가 저장소 루트가 아닐 때만 쓴다.
 이 저장소의 canary 잡이 이걸로 자기 자신을 호출한다.
