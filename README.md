@@ -88,6 +88,20 @@ ci / lint        ci / typecheck        ci / test        ci / build
 검사 항목이 아니라 **전제**로 둔 것이다 — 락파일 커밋은 바닥의 MUST 이므로
 "없으면 통과"가 될 자리가 없다.
 
+## 기존 저장소의 룰셋 올리기
+
+`ruleset.json` 은 **새 저장소**에만 적용된다. 기존 저장소는 API 로 고쳐야 하는데,
+손으로 JSON 을 붙이면 **다른 필드를 실수로 지운다** — 그러면 벽이 조용히 약해진다.
+
+```bash
+# 🔒 관리자 권한이 필요하다. 사람이 돌린다 (A-1).
+env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh --dry-run coolbress/<repo> 'CodeQL:57789'
+env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh          coolbress/<repo> 'CodeQL:57789'
+```
+
+**더하기만 한다.** 기존 요구 검사·우회자·강제 설정은 그대로 둔다.
+`--dry-run` 은 **읽기만** 하므로 제한 토큰으로도 확인할 수 있다.
+
 ## 새 프로젝트 만들기
 
 ```bash
