@@ -32,7 +32,15 @@ ci / lint        ci / typecheck        ci / test        ci / build
 ```
 
 `lint` 가 아니라 **`ci / lint`** 다. 그래서 [`ruleset.json`](ruleset.json) 의
-`required_status_checks` 도 그 이름을 그대로 요구한다.
+`required_status_checks` 도 그 이름을 그대로 요구한다 — 넷 + `ci / secrets` + **`CodeQL`**.
+
+🔴 **`CodeQL` 의 출처는 다르다** — `ci / *` 는 GitHub Actions App(`15368`)이고
+`CodeQL` 은 code scanning App(**`57789`** · `github-advanced-security`)이다.
+그래서 `new-project.sh` 가 **벽을 걸기 전에** CodeQL default setup 을 켠다 —
+안 켜면 그 이름이 영원히 보고되지 않아 **저장소가 첫 PR 부터 잠긴다.**
+
+⚠️ **언어별 잡(`Analyze (python)` 등)은 요구하지 않는다.** 저장소마다 언어가 달라서
+없는 언어를 요구하면 같은 형태로 잠긴다. **집계 검사 하나만** 쓴다.
 
 **호출잡 이름을 바꾸면 네 검사가 전부 다른 이름으로 보고되고, 룰셋이 요구하는 이름은
 영원히 보고되지 않는다 — 저장소가 머지 불가 상태로 조용히 잠긴다.** 검사는 초록인데

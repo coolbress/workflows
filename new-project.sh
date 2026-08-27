@@ -43,6 +43,13 @@ created=1
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
 git -C "$name" diff --quiet || { git -C "$name" commit -qam "chore: 라이선스를 $lic 로 설정"; git -C "$name" push -q; }
 
+# 🔴 CodeQL 을 **벽을 걸기 전에** 켠다.
+# 룰셋이 `CodeQL` 검사를 요구하는데 default setup 이 꺼져 있으면 그 이름이
+# **영원히 보고되지 않아 저장소가 첫 PR 부터 잠긴다** — `uv sync --locked` 로 이미 겪은 형태다.
+# 실패하면 trap 이 저장소를 지운다. 벽 없는 저장소도, 잠긴 저장소도 남기지 않는다.
+gh api -X PATCH "repos/coolbress/$name/code-scanning/default-setup" \
+  -f state=configured -f query_suite=default >/dev/null
+
 # 벽.
 if ! err="$(gh api "repos/coolbress/$name/rulesets" -X POST --input "$here/ruleset.json" 2>&1 >/dev/null)"; then
   echo "$err" >&2; cat >&2 <<EOF
