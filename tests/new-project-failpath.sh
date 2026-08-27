@@ -115,6 +115,21 @@ run() { # 단계 · 기대 종료(ok|err) · 지움을 기대하나(yes|no)
 }
 
 echo "new-project.sh 실패 경로 — 어디서 넘어져도 벽 없는 저장소를 남기지 않는가"
+
+# --private 는 지원하지 않는다. **저장소를 만들기 전에** 멈춰야 한다 —
+# 받는 척하고 중간에 실패하면 만들었다 지우는 낭비가 된다.
+printf '  '
+if out=$( cd "$work" && "$root/new-project.sh" probe --private 2>&1 ) ; then
+  printf '🔴 %-12s --private 가 통과했다
+' "private"; fail=$((fail+1))
+elif printf '%s' "$out" | grep -q "아직 지원하지 않는다"; then
+  printf '✅ %-12s 저장소를 만들기 전에 멈춘다
+' "private"; pass=$((pass+1))
+else
+  printf '🔴 %-12s 다른 이유로 실패했다
+' "private"; printf '%s
+' "$out"|tail -2; fail=$((fail+1))
+fi
 # 저장소가 생기기 *전* 실패는 지울 것이 없다.
 # license-check 가 여기 있는 것이 핵심이다 — 라이선스 오타는 저장소를 만들기 전에 걸러야 한다.
 run license-check err no

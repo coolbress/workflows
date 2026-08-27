@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 새 프로젝트 하나 만든다. 사람이 손으로 하면 빠뜨리는 것만 한다.
-#   사용법: ./new-project.sh <이름> [--private] [--license=<spdx>]
-#   예:     ./new-project.sh myapp --private --license=apache-2.0
+#   사용법: ./new-project.sh <이름> [--license=<spdx>]        (--private 는 미지원)
+#   예:     ./new-project.sh myapp --license=apache-2.0
 #
 # 이 스크립트의 책임: 저장소 생성 + 서버 바닥(벽·시크릿 탐지) 설치. 그 이상은 하지 않는다.
 # fail-closed: 어느 단계에서 실패하든 원격 저장소를 남기지 않는다.
@@ -9,10 +9,31 @@
 # 순서 주의: 라이선스 교체는 룰셋을 걸기 *전*에 한다 (건 뒤엔 main 직접 푸시가 막힌다).
 set -euo pipefail
 
-name="${1:?사용법: new-project.sh <이름> [--private] [--license=<spdx>]}"; shift
+name="${1:?사용법: new-project.sh <이름> [--license=<spdx>]  (--private 는 미지원)}"; shift
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; vis=--public; lic=mit
 for a in "$@"; do case "$a" in
-  --private) vis=--private ;;
+  # 🔴 --private 는 **지금 지원하지 않는다.** 받는 척하면 안 된다.
+  # 이유 둘: ① GitHub Free 는 비공개에 룰셋을 못 건다(Pro 필요)
+  #          ② 룰셋이 `CodeQL` 을 요구하는데 비공개 CodeQL 은
+  #             `GitHub Code Security` 라이선스가 필요하다(`FFA-008`).
+  # 정본의 결정은 "비공개 → Semgrep OSS" 인데 **그 경로가 아직 구현돼 있지 않다.**
+  # 구현하기 전까지는 **여기서 막는다** — 만들다 실패해 저장소를 지우는 것보다
+  # 시작 전에 이유를 말하는 것이 낫다.
+  --private)
+    cat >&2 <<'EOF'
+🔴 --private 는 아직 지원하지 않는다.
+
+  ① GitHub Free 는 비공개 저장소에 룰셋을 걸 수 없다 (Pro 필요)
+  ② 룰셋이 `CodeQL` 을 요구하는데, 비공개 CodeQL 은
+     `GitHub Code Security` 라이선스가 필요하다
+
+정본의 결정은 "공개 → CodeQL · 비공개 → Semgrep OSS" 지만
+**비공개 경로(Semgrep 잡 + 별도 required context)가 아직 구현되지 않았다.**
+받는 척하고 중간에 실패하느니 여기서 멈춘다.
+
+지금 할 수 있는 것: 공개로 만든다 (`--private` 를 빼고 다시 실행)
+EOF
+    exit 2 ;;
   --license=*) lic="${a#*=}" ;;
   *) echo "모르는 인자: $a" >&2; exit 2 ;;
 esac; done
@@ -52,11 +73,9 @@ gh api -X PATCH "repos/coolbress/$name/code-scanning/default-setup" \
 
 # 벽.
 if ! err="$(gh api "repos/coolbress/$name/rulesets" -X POST --input "$here/ruleset.json" 2>&1 >/dev/null)"; then
-  echo "$err" >&2; cat >&2 <<EOF
+  echo "$err" >&2; cat >&2 <<'EOF'
 
-비공개 + GitHub Free 면 룰셋이 걸리지 않는다. GitHub 이 직접 그렇게 답한다 —
-  "Upgrade to GitHub Pro or make this repository public to enable this feature."
-길은 둘뿐이다: 1) GitHub Pro 로 올리고 다시 실행  2) --private 없이 다시 실행
+벽을 걸지 못했다. 방금 만든 원격 저장소는 지운다 — 벽 없는 저장소를 남기지 않는다.
 EOF
   exit 1
 fi
