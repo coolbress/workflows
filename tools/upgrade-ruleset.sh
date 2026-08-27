@@ -8,8 +8,9 @@
 # 고쳐야 하는데, 손으로 JSON 을 붙이면 **다른 필드를 실수로 지운다** —
 # 그러면 벽이 조용히 약해진다. 이 스크립트는 **더하기만** 한다.
 #
-# 🔒 A-1: 에이전트 자격증명으로는 403 이다. 사람이 이렇게 돌린다:
-#   env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh <저장소> ...
+# 🔒 A-1: 에이전트 자격증명으로는 403 이다. 관리자 열쇠는 이 컴퓨터에 저장돼 있지 않으므로
+# 사람이 토큰을 **물어보는 래퍼**로 돌린다 (토큰이 명령줄·히스토리에 안 남는다):
+#   ./tools/with-admin-token.sh ./tools/upgrade-ruleset.sh <저장소> ...
 set -euo pipefail
 
 dry=0

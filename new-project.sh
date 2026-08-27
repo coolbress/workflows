@@ -98,10 +98,15 @@ gh api -X PUT "repos/coolbress/$name/automated-security-fixes"
 # 🔴 이전 판은 `allowed_actions=all` 이었다 — 새 저장소만 allowlist 없이 태어나서
 # `repo_audit` 이 즉시 drift 로 잡았다. **생성기와 감사기의 기대값이 달랐다.**
 gh api -X PUT "repos/coolbress/$name/actions/permissions" -F enabled=true -f allowed_actions=selected -F sha_pinning_required=true
-# 허용 목록: GitHub 소유(actions/*, github/*) + 재사용 워크플로가 쓰는 setup-uv.
-# 같은 소유자의 재사용 워크플로 자체는 allowlist 대상이 아니다.
+# 허용 목록: GitHub 소유(actions/*, github/*) + 재사용 워크플로가 쓰는 setup-uv
+# + 🔴 **재사용 워크플로 자신**(coolbress/workflows/*).
+# 마지막 것을 빠뜨리면 `uses: coolbress/workflows/...` 가 allowlist 에 걸려
+# **첫 CI 가 startup_failure 로 죽는다** — 검사가 아예 보고되지 않으니 저장소가 잠긴다.
+# 실측으로 잡았다: project-template 은 이 패턴을 갖고 있는데 생성기는 안 걸고 있었다.
 gh api -X PUT "repos/coolbress/$name/actions/permissions/selected-actions" \
-  -F github_owned_allowed=true -F verified_allowed=false -f 'patterns_allowed[]=astral-sh/setup-uv@*' 
+  -F github_owned_allowed=true -F verified_allowed=false \
+  -f 'patterns_allowed[]=astral-sh/setup-uv@*' \
+  -f 'patterns_allowed[]=coolbress/workflows/*' 
 # 머지 방법을 룰셋 의도와 맞춘다.
 gh api -X PATCH "repos/coolbress/$name" -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true >/dev/null
 
