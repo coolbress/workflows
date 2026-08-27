@@ -29,11 +29,31 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # 다이제스트로 핀한다 — 태그(1.7.12)는 가변이다.
+      # 🔴 `docker://` 로 쓰지 않는다 — 그 형태가 **두 번 값을 치렀다**:
+      #   ① Actions allowlist 패턴에 `docker://` 가 들어가지 않아 이 저장소만 allowlist 를 못 걸었다
+      #   ② 의존성 그래프에도 안 잡혀 경보도 갱신 PR 도 오지 않았다
+      #      (standards: audit/DEPENDENCY-GRAPH-SCOPE.ko.md)
+      # rhysd/actionlint 에는 **공식 Action 이 없다**(Docker 이미지뿐). 제3자 래퍼를
+      # 중앙 저장소에 들이는 대신 **공식 릴리스 바이너리를 체크섬으로 검증해** 쓴다.
+      # 다이제스트 핀과 같은 보장(바뀌면 실패)을 주면서 allowlist 를 막지 않는다.
+      # 올릴 때: 버전과 체크섬을 **같이** 바꾼다. 체크섬은 릴리스의 checksums.txt 에 있다.
+      - name: actionlint 설치 — 공식 릴리스 + SHA256 검증
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/actionlint"; mkdir -p "$d"
+          f="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$d/$f" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$f"
+          echo "${ACTIONLINT_SHA256}  $d/$f" | sha256sum -c -
+          tar -xzf "$d/$f" -C "$d" actionlint
+          echo "$d" >> "$GITHUB_PATH"
+
+      # actionlint 는 있으면 shellcheck·pyflakes 로 `run:` 블록까지 검사한다.
       - name: 워크플로 문법·사용법 검사
-        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
-        with:
-          args: -color
+        run: actionlint -color
 
       # 🔴 여기까지는 YAML 만 봤다. 이 저장소의 나머지도 전부 실행 코드다 —
       # new-project.sh 는 저장소를 만들고 지우고, ruleset.json 은 새 저장소의 벽이 된다.
