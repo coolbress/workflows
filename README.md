@@ -98,20 +98,24 @@ ci / lint        ci / typecheck        ci / test        ci / build
 손으로 JSON 을 붙이면 **다른 필드를 실수로 지운다** — 그러면 벽이 조용히 약해진다.
 
 ```bash
-# 🔒 관리자 권한이 필요하다. 사람이 돌린다 (A-1).
-env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh --dry-run coolbress/<repo> 'CodeQL:57789'
-env -u GH_TOKEN -u GITHUB_TOKEN ./tools/upgrade-ruleset.sh          coolbress/<repo> 'CodeQL:57789'
+./tools/upgrade-ruleset.sh --dry-run coolbress/<repo> 'CodeQL:57789'          # 읽기만 — 제한 토큰으로 된다
+./tools/with-admin-token.sh ./tools/upgrade-ruleset.sh coolbress/<repo> 'CodeQL:57789'
 ```
 
 **더하기만 한다.** 기존 요구 검사·우회자·강제 설정은 그대로 둔다.
-`--dry-run` 은 **읽기만** 하므로 제한 토큰으로도 확인할 수 있다.
+
+🔒 **관리자 토큰은 이 컴퓨터에 저장돼 있지 않다**([`with-admin-token.sh`](tools/with-admin-token.sh) 가 물어본다).
+🔴 **토큰을 명령줄에 쓰지 마라** — `GH_TOKEN=... 명령` 형태는 **`~/.zsh_history` 에 그대로 남는다.**
 
 ## 새 프로젝트 만들기
 
 ```bash
-./new-project.sh <이름>              # 공개 · MIT
-./new-project.sh <이름> --license=apache-2.0
+./tools/with-admin-token.sh ./new-project.sh <이름>              # 공개 · MIT
+./tools/with-admin-token.sh ./new-project.sh <이름> --license=apache-2.0
 ```
+
+🔒 관리자 권한이 필요하고 **관리자 토큰은 이 컴퓨터에 저장돼 있지 않다.** 래퍼가 물어본다 —
+🔴 **`GH_TOKEN=... ./new-project.sh` 처럼 명령줄에 쓰지 마라. 히스토리에 남는다.**
 
 🔴 **`--private` 는 아직 지원하지 않는다.** 받는 척하지 않고 **시작 전에 멈춘다** —
 ① Free 는 비공개에 룰셋을 못 걸고 ② 룰셋이 요구하는 `CodeQL` 은 비공개에서
