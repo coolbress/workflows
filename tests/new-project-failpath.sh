@@ -32,6 +32,7 @@ case "$all" in
   *security_and_analysis*)  step=secret ;;
   *vulnerability-alerts*)   step=dependabot ;;
   *automated-security-fixes*) step=dependabot ;;
+  *selected-actions*)       step=allowlist ;;
   *actions/permissions*)    step=actions ;;
   *allow_merge_commit*)     step=merge ;;
 esac
@@ -124,6 +125,7 @@ run ruleset    err yes
 run secret     err yes
 run dependabot err yes
 run actions    err yes
+run allowlist  err yes
 run merge      err yes
 # 끝까지 성공하면 지우지 않는다 — 이게 없으면 "항상 지운다"도 통과한다.
 run none       ok  no
