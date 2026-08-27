@@ -181,7 +181,7 @@ ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
 | `bash -n` | 셸 문법 |
 | `shellcheck` | 셸 정적 결함 |
 | **`tools/check-ruleset.sh`** | **벽이 벽인가** — 우회자 0 · 강제 적용 · squash 전용 · 검사 4종과 **출처(App 15368)** · strict |
-| **`tests/new-project-failpath.sh`** | **fail-closed** — `gh` 를 목으로 바꿔 **모든 단계에서 실패시켜 보고**, 어디서 넘어지든 원격 저장소가 남지 않는지 확인한다 (10 케이스) |
+| **`tests/new-project-failpath.sh`** | **fail-closed** — `gh` 를 목으로 바꿔 **모든 단계에서 실패시켜 보고**, 어디서 넘어지든 원격 저장소가 남지 않는지 확인한다. **개수는 여기 적지 않는다** — 시험 파일이 정본이다 |
 
 ### 🔴 actionlint 를 `docker://` 로 쓰지 않는 이유
 
