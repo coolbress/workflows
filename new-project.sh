@@ -149,7 +149,7 @@ created=0; trap - EXIT
 cat <<EOF
 완료 → https://github.com/coolbress/$name  (${vis#--} · $lic)
 
-🔴 남은 한 단계 — **사람만 할 수 있다**
+🔴 남은 한 단계 — **사람만 할 수 있다** (토큰 편집 API 가 없다)
    에이전트 토큰(agent-daily)의 저장소 목록에 **$name 을 추가**해야 한다.
    안 하면 에이전트가 브랜치도 PR 도 못 만든다 — 403 만 조용히 난다.
 
@@ -158,6 +158,7 @@ cat <<EOF
 
    (토큰 값은 안 바뀐다. 세션 재시작도 필요 없다.)
 
-   그리고 감사 대상에도 넣는다 — standards 의 tools/repo_audit.py 의 REPOS 에
+📌 그리고 감사 대상에 넣는다 — standards 의 tools/repo_audit.py 의 REPOS 에
    "coolbress/$name" 한 줄. 안 넣으면 이 저장소의 벽이 무너져도 아무도 안 본다.
+   **이건 에이전트가 PR 로 하면 된다** — 위 토큰 단계를 끝낸 뒤 시키면 된다.
 EOF
