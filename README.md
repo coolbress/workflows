@@ -162,13 +162,37 @@ ci / lint    ci / typecheck    ci / test    ci / build    ci / secrets    ci / d
 cd ~                                    # 🔴 저장소 밖에서. 아래 참조
 ~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름>
 ~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름> --license=apache-2.0
+~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름> --archetype=service
 ```
 
 🔴 **저장소 안에서 돌리면 멈춘다.** `gh repo create --clone` 은 **현재 폴더**에 복제하므로
 `~/workflows` 에서 돌리면 `~/workflows/<이름>` — **저장소 안에 저장소**가 된다.
 문서로 당부하는 대신 **스크립트가 막는다.**
 
-⚠️ **기본은 공개 · MIT 다.** 다른 라이선스면 `--license=<spdx>` 를 준다.
+⚠️ **기본은 공개 · MIT · `cli` 다.** 다른 라이선스면 `--license=<spdx>`, 다른 종류면
+`--archetype=<cli|library|service|data-ml>` 를 준다.
+
+🔵 **아키타입이 조건부 산출물을 정한다** — 바닥(`standards` `direction/05`)이 아키타입으로
+조건을 건다(`.env.example` 은 *12-Factor 는 service 맥락* 이다). copier 의 `_exclude` 가
+그 조건을 집행하므로 **파일을 지우는 게 아니라 애초에 안 만든다** — 스텁이 안 남는다.
+**모르겠으면 가장 좁은 것(`cli`)** 을 고른다: 넓히는 것은 파일을 더하는 일이고,
+좁히는 것은 안 쓰는 파일을 지우는 일이라 스텁으로 남는다.
+
+### 🔴 `--template` 이 아니라 **빈 저장소 + copier** 다
+
+`gh repo create --template` 은 **시점 복사**라 복사가 끝나면 원본과 **연결이 끊긴다** —
+템플릿을 고쳐도 인스턴스는 그대로다. 2026-08-28 하루에만 *"기존 인스턴스는 자동으로
+안 바뀐다"* 를 **세 번** 적었다.
+
+copier 는 인스턴스에 **`.copier-answers.yml`** 을 남겨 *어느 판에서 태어났는지* 기억하고,
+나중에 **`copier update`** 로 그 뒤의 템플릿 변경만 골라 **병합**한다.
+
+⚠️ **빈 저장소를 클론하면 로컬 HEAD 가 `init.defaultBranch` 를 따른다.** 그게 `master` 면
+룰셋이 거는 `~DEFAULT_BRANCH`(=`main`)와 어긋나 **벽이 빈 브랜치를 지키게 된다.**
+그래서 클론 직후 `symbolic-ref HEAD refs/heads/main` 으로 못박는다.
+
+🔵 **fail-closed 는 그대로다** — 보증은 `trap cleanup EXIT` 하나이고 **콘텐츠가 어떻게
+들어오는지와 무관**하다. 실패경로 시험에 `copier` 단계를 더해 **15/15** 로 확인했다.
 
 🔒 관리자 권한이 필요하고 **관리자 토큰은 이 컴퓨터에 저장돼 있지 않다.** 래퍼가 물어본다 —
 🔴 **`GH_TOKEN=... ./new-project.sh` 처럼 명령줄에 쓰지 마라. 히스토리에 남는다.**

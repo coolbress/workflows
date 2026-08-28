@@ -43,33 +43,50 @@ if [ "$step" = "${FAIL_AT:-}" ]; then
 fi
 case "$step" in
   create)
-    # 실제 `gh repo create --clone` 처럼, 이름이 같은 디렉터리를 만들고 클론해 둔다.
+    # 실제 `gh repo create --clone` 처럼 디렉터리를 만들고 클론해 둔다.
+    # 🔴 **내용은 넣지 않는다** — 이제 `--template` 이 아니라 빈 저장소이고,
+    # 파일은 copier 가 넣는다. 그래서 여기는 `git init` 까지다.
     name=""
     for a in "$@"; do case "$a" in coolbress/*) name="${a#coolbress/}"; break ;; esac; done
     [ -n "$name" ] || { echo "mock gh: 저장소 이름을 못 읽었다" >&2; exit 1; }
     mkdir -p "$name"
-    ( cd "$name"
-      "$REAL_GIT" init -q -b main
-      # 템플릿이 싣고 오는 것들. LICENSE 가 **추적되어 있어야** 뒤의
-      # `git diff --quiet` 가 라이선스 교체를 감지한다 (실제와 같은 조건).
-      printf 'MIT\n' > LICENSE
-      printf 'name = "app"\n' > pyproject.toml
-      # 실물 템플릿과 같은 구성 — new-project.sh 가 생성기를 지우므로 지울 대상이 있어야 한다
-      mkdir -p tests && printf '# 생성기 시험\n' > tests/test_bootstrap_name.py
-      cat > bootstrap.sh <<'BS'
+    ( cd "$name" && "$REAL_GIT" init -q -b main )
+    ;;
+  license-check) printf 'MIT\n' ;;
+  license)       printf 'MOCK LICENSE BODY\n' ;;
+esac
+exit 0
+MOCK
+
+# ── 목: uvx (copier 만 가로챈다) ─────────────────────────────
+# 실물은 `uvx copier copy … <dst>` 다. 템플릿이 싣고 오는 것을 그 자리에 만든다.
+cat > "$work/bin/uvx" <<'MOCK'
+#!/usr/bin/env bash
+set -u
+printf 'uvx %s\n' "$*" >> "$GH_LOG"
+case "$*" in
+  *copier*copy*) ;;
+  *) exit 0 ;;
+esac
+if [ "${FAIL_AT:-}" = copier ]; then
+  echo "mock copier: 렌더를 의도적으로 실패시킨다" >&2
+  exit 1
+fi
+dst="${!#}"   # 마지막 인자가 목적지다
+mkdir -p "$dst/tests"
+# LICENSE 가 **추적되어 있어야** 뒤의 `git diff --quiet` 가 라이선스 교체를 감지한다.
+printf 'MIT\n'            > "$dst/LICENSE"
+printf 'name = "app"\n'   > "$dst/pyproject.toml"
+printf '# 생성기 시험\n'   > "$dst/tests/test_bootstrap_name.py"
+printf '_commit: mock\n'  > "$dst/.copier-answers.yml"
+cat > "$dst/bootstrap.sh" <<'BS'
 #!/usr/bin/env bash
 set -euo pipefail
 # 실물과 같은 서명: <이름> [SPDX]. 2번째 인자가 안 오면 여기서 실패해야 한다.
 printf 'name = "%s"\nlicense = "%s"\n' "$1" "${2:?bootstrap 이 SPDX 를 못 받았다}" > pyproject.toml
 git add -A
 BS
-      chmod +x bootstrap.sh
-      "$REAL_GIT" add -A
-      "$REAL_GIT" commit -qm init )
-    ;;
-  license-check) printf 'MIT\n' ;;
-  license)       printf 'MOCK LICENSE BODY\n' ;;
-esac
+chmod +x "$dst/bootstrap.sh"
 exit 0
 MOCK
 
@@ -89,7 +106,7 @@ for a in "$@"; do
 done
 exec "$REAL_GIT" "$@"
 MOCK
-chmod +x "$work/bin/gh" "$work/bin/git"
+chmod +x "$work/bin/gh" "$work/bin/git" "$work/bin/uvx"
 
 export REAL_GIT="$real_git"
 export PATH="$work/bin:$PATH"
@@ -149,6 +166,8 @@ fi
 run license-check err no
 run create        err no
 # 생긴 *뒤* 는 어느 단계에서 넘어지든 지운다.
+# copier 는 `--template` 을 대체한 단계다 — 여기서 넘어져도 저장소를 남기면 안 된다.
+run copier     err yes
 run push       err yes
 run license    err yes
 run codeql     err yes

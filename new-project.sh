@@ -35,6 +35,7 @@ for a in "$@"; do case "$a" in
 EOF
     exit 2 ;;
   --license=*) lic="${a#*=}" ;;
+  --archetype=*) arch="${a#*=}" ;;
   *) echo "모르는 인자: $a" >&2; exit 2 ;;
 esac; done
 
@@ -62,6 +63,15 @@ if ! spdx="$(gh api "/licenses/$lic" --jq .spdx_id 2>/dev/null)"; then
   exit 2
 fi
 
+# 아키타입 — 바닥(`standards` direction/05)의 조건부 항목이 이 값으로 정해진다.
+# 기본은 가장 좁은 것이다: 넓히는 것은 파일을 더하는 일이고, 좁히는 것은
+# 안 쓰는 파일을 지우는 일이라 스텁으로 남는다.
+arch="${arch:-cli}"
+case "$arch" in
+  cli|library|service|data-ml) ;;
+  *) echo "모르는 아키타입: $arch  (cli · library · service · data-ml)" >&2; exit 2 ;;
+esac
+
 created=0
 cleanup() {
   [ "$created" = 1 ] || return 0
@@ -70,10 +80,24 @@ cleanup() {
 }
 trap cleanup EXIT
 
-gh repo create "coolbress/$name" "$vis" --template coolbress/project-template --clone
+# 🔴 `--template` 이 아니라 **빈 저장소 + copier** 다.
+# `--template` 은 시점 복사라 복사가 끝나면 원본과 연결이 끊긴다 — 템플릿을 고쳐도
+# 인스턴스는 그대로다. copier 는 `.copier-answers.yml` 을 남겨 어느 판에서 태어났는지
+# 기억하고 `copier update` 로 그 뒤 변경을 병합한다.
+gh repo create "coolbress/$name" "$vis" --clone
 created=1
 
-# 🔴 **푸시가 되는지 맨 앞에서 확인한다.** bootstrap(uv lock·sync)까지 다 하고 나서
+# 🔴 빈 저장소를 클론하면 로컬 HEAD 가 `init.defaultBranch` 를 따른다 — 그게 `master` 면
+# 룰셋이 거는 `~DEFAULT_BRANCH`(=`main`)와 어긋나 **벽이 빈 브랜치를 지키게 된다.**
+git -C "$name" symbolic-ref HEAD refs/heads/main
+
+# 템플릿을 렌더한다. `--defaults` + `--data` 로 물어보지 않는다.
+uvx --quiet copier copy --defaults --quiet \
+  --data "project_name=$name" --data "license=$spdx" --data "archetype=$arch" \
+  "gh:coolbress/project-template" "$name" < /dev/null
+( cd "$name" && git add -A && git commit -qm "chore: copier 로 템플릿에서 생성 ($arch)" )
+
+# 🔴 **푸시가 되는지 앞에서 확인한다.** bootstrap(uv lock·sync)까지 다 하고 나서
 # 알면 늦다 — 실제로 두 번 그렇게 실패했다(2026-08-27: 붙여넣기에 딸려온 공백 한 칸.
 # API 는 헤더라 서버가 잘라내서 통과했고, git push 는 HTTP Basic 이라 base64 안에 남아 거부됐다).
 probe="__push-probe"
