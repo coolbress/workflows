@@ -53,7 +53,8 @@ ci / lint    ci / typecheck    ci / test    ci / build    ci / secrets    ci / d
 
 | 워크플로 | 검사 | 전제 |
 |---|---|---|
-| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` · `secrets` · `diff-size` — **각각 별도 검사** | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+| `python-ci.yml` | `lint` · `typecheck` · `test` · `build` · `secrets` · `diff-size` · `pr-title` — **각각 별도 검사** | uv 프로젝트 · `uv.lock` 커밋됨 · ruff · mypy · pytest |
+| `pr-label.yml` | *(검사 아님)* PR 제목의 타입을 **라벨로** 옮긴다 | 호출부가 `pull-requests: write` 를 준다 |
 
 > ⚠️ **개수를 문장에 반복하지 않는다.** 요구되는 검사의 정본은 [`ruleset.json`](ruleset.json) 하나이고,
 > `tools/check-ruleset.sh` 가 그 목록을 불변식으로 지킨다. 예전에 *"네 검사"* 가 문서 여러 곳에
@@ -319,6 +320,25 @@ commit SHA is immutable"* 이라 규정한다). **태그는 그 SHA 가 무엇�
 **`project-template` 도 이제 릴리스한다** (2026-08-28 · `standards` R5-33). 규칙은 안 바뀌었고
 사실이 바뀌었다 — copier 로 넘어가면서 인스턴스의 `.copier-answers.yml` 이 템플릿을 참조한다.
 
+### 🏷️ PR 제목 · 라벨 · 릴리스 노트는 **한 줄기**다
+
+```
+PR 제목  ──ci / pr-title 이 강제──→  타입이 표준 11종인가
+   │
+   └──label.yml 이 파생──→  라벨  ──.github/release.yml 이 묶음──→  분류된 색인
+```
+
+🔵 **제목이 유일한 출처다.** `actions/labeler` 처럼 파일 경로나 브랜치 이름으로 붙이면
+규칙이 **두 곳**(제목 규약 + 라벨러 설정)에 생기고 조용히 갈린다. 사람이 붙이는 일은 **없다.**
+
+**타입은 `@commitlint/config-conventional` 과 같은 11종뿐이다.**
+지역 의미는 **scope** 로 쓴다 — `docs(research):` · `docs(decision):` · `refactor(layout):`.
+근거는 `standards` [`direction/05`](https://github.com/coolbress/standards/blob/main/direction/05-the-output-floor.md) §정정
+(2026-08-28): 확장 어휘를 문서에 적어두는 방식이 **하루를 못 버텼다.**
+
+⚠️ **`ci / pr-title` 을 룰셋에 넣기 전에 핀을 먼저 올려라.** 옛 SHA 에 핀된 저장소에는 그 잡이
+없으므로 **검사 이름이 영원히 보고되지 않아 저장소가 잠긴다.** 순서는 언제나 **핀 → 룰셋**이다.
+
 ### 어떻게 만드나 — **왜**는 사람이 쓰고 **무엇**은 GitHub 이 만든다
 
 ```bash
@@ -342,9 +362,10 @@ tools/make-release.sh v3.4.0 /tmp/why.md      # 태그는 미리 밀어둔다
 *"`uses:` 로 부르는 쪽은 핀을 올릴 이유가 없다"* 가 있다. **소비자가 뭘 해야 하는가는 커밋 로그에 없다.**
 생성기는 우리 노트의 열등한 판이 아니라 **다른 물건**이다 — 설명이 아니라 **색인**이다.
 
-⚠️ **라벨을 안 쓰면 분류는 없다.** `.github/release.yml` 은 **라벨로** 묶는다.
-2026-08-28 실측: 세 저장소의 머지된 PR **68건 중 라벨이 붙은 것 0건.** 지금은 한 덩어리로 나온다 —
-색인으로는 그대로 쓸모 있고, 분류를 원하면 **라벨부터** 붙여야 한다.
+✅ **라벨은 이제 자동이다** (2026-08-28). `label.yml` 이 제목의 타입에서 파생시키고
+`.github/release.yml` 이 그 라벨로 묶는다. **사람이 붙이는 일은 없다.**
+🔴 `release.yml` 에 `labels: ["*"]` catch-all 을 반드시 남긴다 — 라벨링은 벽이 아니라 편의라
+실패할 수 있고, 그때 그 PR 이 노트에서 **조용히 사라지면 안 된다.**
 
 ## 근거
 

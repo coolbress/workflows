@@ -77,6 +77,11 @@ jobs:
       - name: 릴리스 도구 가드
         run: ./tests/make-release-guards.sh
 
+      # 규칙을 옮겨 적지 않고 python-ci.yml 에서 **뽑아서** 시험한다.
+      # 옮겨 적으면 두 곳이 되고, 두 곳이 되면 갈린다.
+      - name: PR 제목 판정 규칙
+        run: ./tests/pr-title-cases.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
