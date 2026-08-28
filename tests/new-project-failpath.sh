@@ -50,7 +50,11 @@ case "$step" in
     for a in "$@"; do case "$a" in coolbress/*) name="${a#coolbress/}"; break ;; esac; done
     [ -n "$name" ] || { echo "mock gh: 저장소 이름을 못 읽었다" >&2; exit 1; }
     mkdir -p "$name"
-    ( cd "$name" && "$REAL_GIT" init -q -b main )
+    # 🔴 일부러 `master` 로 만든다. 실제로 `init.defaultBranch=master` 인 기계가 있고,
+    # 그러면 룰셋이 거는 `~DEFAULT_BRANCH`(=main)와 어긋나 **벽이 빈 브랜치를 지킨다.**
+    # new-project.sh 의 `symbolic-ref` 가 그걸 막는데, 목이 `main` 으로 만들면
+    # 그 줄을 지워도 시험이 통과한다 — 아무것도 안 지키는 시험이 된다.
+    ( cd "$name" && "$REAL_GIT" init -q -b master )
     ;;
   license-check) printf 'MIT\n' ;;
   license)       printf 'MOCK LICENSE BODY\n' ;;
@@ -179,6 +183,19 @@ run allowlist  err yes
 run merge      err yes
 # 끝까지 성공하면 지우지 않는다 — 이게 없으면 "항상 지운다"도 통과한다.
 run none       ok  no
+
+# 🔴 끝까지 성공했을 때 **기본 브랜치가 `main` 인가.**
+# 룰셋은 `~DEFAULT_BRANCH` 를 지킨다. 로컬이 `master` 로 커밋하면 원격에 `master` 가 생기고
+# `main` 은 비어 있게 되어 **벽이 아무것도 안 지킨다.** 목이 `master` 로 init 하므로
+# 이 검사는 `symbolic-ref` 줄이 없으면 실제로 실패한다.
+printf '  '
+head_ref="$( "$REAL_GIT" -C "$work/run-none/probe" symbolic-ref HEAD 2>/dev/null || echo "?" )"
+if [ "$head_ref" = "refs/heads/main" ]; then
+  printf '✅ %-12s 기본 브랜치가 main 이다\n' "branch"; pass=$((pass+1))
+else
+  printf '🔴 %-12s 기본 브랜치가 %s 다 — 룰셋은 ~DEFAULT_BRANCH(main)를 지킨다\n' "branch" "$head_ref"
+  fail=$((fail+1))
+fi
 
 printf 'RESULT %s pass=%d fail=%d\n' "$([ "$fail" = 0 ] && echo PASS || echo FAIL)" "$pass" "$fail"
 [ "$fail" = 0 ]
