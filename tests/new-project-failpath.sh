@@ -88,7 +88,11 @@ for a in "$@"; do
 done
 : "${pname:?mock copier: --data project_name 을 못 받았다}"
 : "${plic:?mock copier: --data license 를 못 받았다}"
-pkg="$(printf '%s' "$pname" | tr '.- ' '___' | tr '[:upper:]' '[:lower:]')"
+# 🔴 `tr '.- '` 로 쓰면 안 된다 — BSD 는 세 글자로 받아주고 **GNU 는 `.`~` ` 범위로 읽는다.**
+# 이건 옛 `bootstrap.sh` 주석에 적혀 있던 바로 그 사건이고, 이 목에서 **또 냈다**:
+# 로컬(macOS)은 20/20 초록이었고 CI(ubuntu)만 3건 빨갰다 (2026-08-28).
+# `sed` 의 대괄호 안에서 `-` 를 **맨 뒤**에 두면 어디서나 리터럴이다.
+pkg="$(printf '%s' "$pname" | sed 's/[.[:space:]-]/_/g' | tr '[:upper:]' '[:lower:]')"
 mkdir -p "$dst/tests" "$dst/src/$pkg"
 # LICENSE 가 **추적되어 있어야** 뒤의 `git diff --quiet` 가 라이선스 교체를 감지한다.
 printf 'MIT\n' > "$dst/LICENSE"
