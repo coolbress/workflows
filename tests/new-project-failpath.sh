@@ -77,20 +77,29 @@ if [ "${FAIL_AT:-}" = copier ]; then
   exit 1
 fi
 dst="${!#}"   # 마지막 인자가 목적지다
-mkdir -p "$dst/tests"
+# 🔵 project-template v2.0.0 부터 **렌더가 끝이다.** 목도 그렇게 행동한다 —
+# 자리표시자를 남기고 나중에 고치는 단계가 없다. `--data` 로 받은 값을 그대로 써낸다.
+pname=""; plic=""
+for a in "$@"; do
+  case "$a" in
+    project_name=*) pname="${a#project_name=}" ;;
+    license=*)      plic="${a#license=}" ;;
+  esac
+done
+: "${pname:?mock copier: --data project_name 을 못 받았다}"
+: "${plic:?mock copier: --data license 를 못 받았다}"
+# 🔴 `tr '.- '` 로 쓰면 안 된다 — BSD 는 세 글자로 받아주고 **GNU 는 `.`~` ` 범위로 읽는다.**
+# 이건 옛 `bootstrap.sh` 주석에 적혀 있던 바로 그 사건이고, 이 목에서 **또 냈다**:
+# 로컬(macOS)은 20/20 초록이었고 CI(ubuntu)만 3건 빨갰다 (2026-08-28).
+# `sed` 의 대괄호 안에서 `-` 를 **맨 뒤**에 두면 어디서나 리터럴이다.
+pkg="$(printf '%s' "$pname" | sed 's/[.[:space:]-]/_/g' | tr '[:upper:]' '[:lower:]')"
+mkdir -p "$dst/tests" "$dst/src/$pkg"
 # LICENSE 가 **추적되어 있어야** 뒤의 `git diff --quiet` 가 라이선스 교체를 감지한다.
-printf 'MIT\n'            > "$dst/LICENSE"
-printf 'name = "app"\n'   > "$dst/pyproject.toml"
-printf '# 생성기 시험\n'   > "$dst/tests/test_bootstrap_name.py"
-printf '_commit: mock\n'  > "$dst/.copier-answers.yml"
-cat > "$dst/bootstrap.sh" <<'BS'
-#!/usr/bin/env bash
-set -euo pipefail
-# 실물과 같은 서명: <이름> [SPDX]. 2번째 인자가 안 오면 여기서 실패해야 한다.
-printf 'name = "%s"\nlicense = "%s"\n' "$1" "${2:?bootstrap 이 SPDX 를 못 받았다}" > pyproject.toml
-git add -A
-BS
-chmod +x "$dst/bootstrap.sh"
+printf 'MIT\n' > "$dst/LICENSE"
+printf 'name = "%s"\nlicense = "%s"\n' "$pkg" "$plic" > "$dst/pyproject.toml"
+printf 'name = "%s"\n' "$pkg" > "$dst/uv.lock"
+: > "$dst/src/$pkg/__init__.py"
+printf '_commit: mock\n' > "$dst/.copier-answers.yml"
 exit 0
 MOCK
 
@@ -195,6 +204,26 @@ if [ "$head_ref" = "refs/heads/main" ]; then
 else
   printf '🔴 %-12s 기본 브랜치가 %s 다 — 룰셋은 ~DEFAULT_BRANCH(main)를 지킨다\n' "branch" "$head_ref"
   fail=$((fail+1))
+fi
+
+# 🔵 **렌더가 끝이라는 것**을 판정한다 (project-template v2.0.0).
+# bootstrap 단계가 사라졌으므로 생성 직후의 트리에 **이미 실제 이름**이 들어 있어야 한다.
+# 안 그러면 새 저장소의 첫 PR 에서 `uv sync --locked` 가 실패한다 — 벽이 서 있어 그대로 잠긴다.
+proj="$work/run-none/probe"
+for want in 'pyproject.toml:probe' 'pyproject.toml:MIT' 'uv.lock:probe'; do
+  f="${want%%:*}"; s="${want#*:}"
+  printf '  '
+  if grep -qF "$s" "$proj/$f" 2>/dev/null; then
+    printf '\xe2\x9c\x85 %-12s %s 에 %s 가 이미 있다\n' "render" "$f" "$s"; pass=$((pass+1))
+  else
+    printf '\xf0\x9f\x94\xb4 %-12s %s 에 %s 가 없다 — 렌더가 끝이 아니다\n' "render" "$f" "$s"; fail=$((fail+1))
+  fi
+done
+printf '  '
+if [ -d "$proj/src/probe" ] && [ ! -e "$proj/bootstrap.sh" ]; then
+  printf '\xe2\x9c\x85 %-12s src/probe/ 가 렌더로 생겼고 bootstrap.sh 를 안 들고 다닌다\n' "render"; pass=$((pass+1))
+else
+  printf '\xf0\x9f\x94\xb4 %-12s src/probe/ 가 없거나 bootstrap.sh 가 남아 있다\n' "render"; fail=$((fail+1))
 fi
 
 printf 'RESULT %s pass=%d fail=%d\n' "$([ "$fail" = 0 ] && echo PASS || echo FAIL)" "$pass" "$fail"

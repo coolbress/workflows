@@ -57,7 +57,7 @@ EOF
 fi
 
 # 라이선스는 **저장소를 만들기 전에** 확인한다 — 오타 하나로 저장소를 만들었다 지우지 않는다.
-# 그리고 SPDX 식별자(MIT · Apache-2.0)를 여기서 얻어 bootstrap 에 넘긴다.
+# 그리고 SPDX 식별자(MIT · Apache-2.0)를 여기서 얻어 copier 에 넘긴다.
 if ! spdx="$(gh api "/licenses/$lic" --jq .spdx_id 2>/dev/null)"; then
   echo "모르는 라이선스: $lic  (예: mit · apache-2.0 · gpl-3.0 — https://api.github.com/licenses)" >&2
   exit 2
@@ -92,13 +92,19 @@ created=1
 git -C "$name" symbolic-ref HEAD refs/heads/main
 
 # 템플릿을 렌더한다. `--defaults` + `--data` 로 물어보지 않는다.
+#
+# 🔵 **이름 치환은 여기서 끝난다** (project-template v2.0.0 부터). 이름·라이선스·패키지
+# 디렉터리·`uv.lock` 이 전부 렌더 시점에 정해져 나온다 — 뒤에 고칠 것이 없다.
+# ⚠️ **못 만들 이름은 여기서 죽는다.** `copier.yml` 의 `validator` 가 `9lives`·`class`·`my+app`
+# 같은 것을 **파일을 하나도 만들기 전에** 거절한다. 그러면 아래 `trap` 이 저장소를 지운다.
+# (v1.0.0 은 `bootstrap.sh` 로 **만든 뒤에** 고쳤고, 그래서 틀린 이름은 트리를 반쯤
+#  바꿔놓은 뒤에야 걸렸다.)
 uvx --quiet copier copy --defaults --quiet \
   --data "project_name=$name" --data "license=$spdx" --data "archetype=$arch" \
   "gh:coolbress/project-template" "$name" < /dev/null
 ( cd "$name" && git add -A && git commit -qm "chore: copier 로 템플릿에서 생성 ($arch)" )
 
-# 🔴 **푸시가 되는지 앞에서 확인한다.** bootstrap(uv lock·sync)까지 다 하고 나서
-# 알면 늦다 — 실제로 두 번 그렇게 실패했다(2026-08-27: 붙여넣기에 딸려온 공백 한 칸.
+# 🔴 **푸시가 되는지 앞에서 확인한다.** 나머지를 다 하고 나서 알면 늦다 — 실제로 두 번 그렇게 실패했다(2026-08-27: 붙여넣기에 딸려온 공백 한 칸.
 # API 는 헤더라 서버가 잘라내서 통과했고, git push 는 HTTP Basic 이라 base64 안에 남아 거부됐다).
 probe="__push-probe"
 if ! err="$( cd "$name" && git push -q origin "HEAD:refs/heads/$probe" 2>&1 )"; then
@@ -115,16 +121,7 @@ EOF
 fi
 ( cd "$name" && git push -q origin --delete "$probe" ) || true
 
-# 템플릿 자리표시자(app)를 실제 이름·라이선스로. 치환 로직은 템플릿이 소유한다 (감사 §생성 방식).
-# bootstrap 은 uv.lock 도 다시 잠근다 — 안 하면 CI 의 `uv sync --locked` 가 첫 PR 부터 실패한다.
-# 치환이 끝나면 **생성기 자신을 지운다.** 남겨 두면 모든 프로젝트가
-# 앞으로 쓰지 않을 일회용 스크립트와 그 시험을 영원히 들고 다닌다
-# (그리고 CI 가 매번 그 시험을 돈다). 대전제 2 — 작고 가볍게.
-( cd "$name" \
-  && ./bootstrap.sh "$name" "$spdx" \
-  && git rm -q bootstrap.sh tests/test_bootstrap_name.py \
-  && git commit -qm "chore: 템플릿 자리표시자를 $name 로 치환 (생성기 제거)" \
-  && git push -q )
+( cd "$name" && git push -q )
 
 # 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
