@@ -28,11 +28,12 @@ jobs:
 위처럼 호출잡을 `ci` 로 두면 체크는 이렇게 보고된다:
 
 ```
-ci / lint        ci / typecheck        ci / test        ci / build
+ci / lint    ci / typecheck    ci / test    ci / build    ci / secrets    ci / diff-size
 ```
 
 `lint` 가 아니라 **`ci / lint`** 다. 그래서 [`ruleset.json`](ruleset.json) 의
-`required_status_checks` 도 그 이름을 그대로 요구한다 — 넷 + `ci / secrets` + **`CodeQL`**.
+`required_status_checks` 도 **그 이름을 그대로** 요구한다. **무엇을 몇 개 요구하는지의 정본은
+그 파일 하나다** — 여기 나열하지 않는다(그러다 문서마다 숫자가 달라진 적이 있다).
 
 🔴 **`CodeQL` 의 출처는 다르다** — `ci / *` 는 GitHub Actions App(`15368`)이고
 `CodeQL` 은 code scanning App(**`57789`** · `github-advanced-security`)이다.
@@ -99,15 +100,24 @@ ci / lint        ci / typecheck        ci / test        ci / build
 보고되지 않는 경로가 생기고, 룰셋이 언젠가 그 이름을 요구하는 순간 저장소가 조용히
 머지 불가로 잠긴다. 조건은 **스텝 안**에 있고 통과로 보고한다.
 
-⚠️ **아직 `ruleset.json` 에 넣지 않았다 — 넣으면 자기잠금이다.** 소비자는 이 저장소를
-**SHA 로 핀**하므로, 룰셋이 `ci / diff-size` 를 요구하는 순간 **옛 SHA 를 핀한 저장소는
-그 이름을 영원히 보고하지 못하고 잠긴다.** 순서가 있다:
+✅ **`ruleset.json` 에 들어 있다 — 이제 새 저장소는 처음부터 강제된다.**
+순서를 지켜서 넣었다. 소비자는 이 저장소를 **SHA 로 핀**하므로, 룰셋이 `ci / diff-size` 를
+요구하는데 **옛 SHA 를 핀한 저장소는 그 이름을 영원히 보고하지 못하고 잠긴다.**
 
 ```
-① 이 잡을 머지 (지금)  →  ② project-template 이 새 SHA 로 핀  →  ③ ruleset.json 에 추가
+① 잡 머지 (v3.2.0)  →  ② project-template 이 v3.2.0 핀  →  ③ ruleset.json 에 추가 ← 지금
 ```
 
-그때까지는 **빨간 X 는 보이지만 머지를 막지는 않는다.** 그래도 문장보다는 낫다.
+🔴 **기존 저장소는 자동으로 안 바뀐다.** `ruleset.json` 은 **새 저장소**에만 적용된다.
+올리기 전에 그 저장소가 **v3.2.0 이상을 핀했는지 먼저 확인해라** — 안 그러면 잠근다:
+
+```bash
+./tools/upgrade-ruleset.sh --dry-run coolbress/<repo> 'ci / diff-size:15368'
+```
+
+⚠️ **이 저장소 자신은 context 이름이 다르다.** 여기 호출잡 이름은 `ci` 가 아니라 `canary` 라
+검사가 **`canary / diff-size`** 로 보고된다. `ci / diff-size` 를 요구하면 그 이름이 영원히
+보고되지 않아 **자기잠금**이다.
 
 **선택 입력** — `working-directory`(기본 `.`). 프로젝트 루트가 저장소 루트가 아닐 때만 쓴다.
 이 저장소의 canary 잡이 이걸로 자기 자신을 호출한다.
@@ -244,7 +254,7 @@ ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
 
 **이 저장소의 룰셋은 `ruleset.json` 과 다르다.** 여기 `integrity` 잡은 재사용 호출이 아니라
 평범한 잡이라 체크 이름이 그냥 `integrity` 다. `ruleset.json` 은 **재사용 워크플로를 부르는
-프로젝트용**이고, 그래서 `ci / *` 네 개를 요구한다.
+프로젝트용**이고, 그래서 `ci / *` 를 요구한다.
 
 ## 규율
 

@@ -59,6 +59,10 @@
             "integration_id": 15368
           },
           {
+            "context": "ci / diff-size",
+            "integration_id": 15368
+          },
+          {
             "context": "CodeQL",
             "integration_id": 57789
           }
