@@ -141,6 +141,65 @@ jobs:
   #   전부 세면 452줄(+436/-16) → 초과.  문서·락파일을 빼면 385줄(+375/-10) → 통과.
   # **규칙이 틀린 게 아니라 계량기가 틀렸다.** README 산문 한 줄이 mypy strict 를 통과해야
   # 하는 코드 한 줄과 같은 무게로 세어지고 있었다.
+  # PR 제목이 Conventional Commits 인가 — **타입은 표준 11종만.**
+  #
+  # 왜 제목인가: 우리는 squash 전용이라 **PR 제목이 곧 랜딩 커밋**이다. 브랜치의 개별
+  # 커밋은 뭉개지므로 하중을 안 받는다. 시중도 여기로 옮겼다(2026 관행).
+  #
+  # 🔴 왜 표준 어휘만인가 (`standards` R5-30 정정, 2026-08-28): 확장 어휘를 문서에 적어두는
+  # 방식이 **하루를 못 버텼다** — 목록이 적혀 있는 상태에서 에이전트가 `record:`·`anchor:` 를
+  # 즉석에서 만들었고 둘 다 실은 `docs:` 였다. 모델이 꺼내는 것은 **훈련에 있는 목록**이다.
+  # 규격도 `feat`·`fix` 만 필수로 두고 나머지는 *"not mandated"* 이며 **scope 는 자유형**이므로,
+  # 지역 의미는 `docs(research):` 처럼 **scope 가 진다** — 잃는 것이 없다.
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 제목을 검사한다
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          # 🔴 PR 이 아닐 때 **잡을 건너뛰지 않고 통과로 보고한다.** `diff-size` 와 같은 이유다 —
+          # `if:` 로 건너뛰면 검사 이름이 보고되지 않는 경로가 생기고, 룰셋이 그 이름을 요구하는
+          # 순간 저장소가 조용히 머지 불가로 잠긴다.
+          if [ -z "${TITLE:-}" ]; then
+            echo "PR 이 아니다 — 검사할 제목이 없다."
+            echo "### 🏷️ PR 제목 — PR 이 아니라 검사하지 않았다" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+          if printf '%s' "$TITLE" | grep -qE "^($types)(\([a-zA-Z0-9_.,/ -]+\))?!?: .+"; then
+            echo "✅ $TITLE"
+            echo "### 🏷️ PR 제목 — 규약을 지킨다" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::error::PR 제목이 Conventional Commits 가 아니다: ${TITLE}"
+          {
+            echo "### 🏷️ PR 제목이 규약을 안 지킨다"
+            echo
+            echo "\`\`\`"
+            echo "$TITLE"
+            echo "\`\`\`"
+            echo
+            echo "**형식**: \`type(scope): 요약\`  ·  범위 변경이면 \`type(scope)!: 요약\`"
+            echo
+            echo "**타입은 이 11종뿐이다** (\`@commitlint/config-conventional\`):"
+            echo "\`feat\` \`fix\` \`docs\` \`style\` \`refactor\` \`perf\` \`test\` \`build\` \`ci\` \`chore\` \`revert\`"
+            echo
+            echo "🔵 **지역 의미는 scope 로 쓴다** — 새 타입을 만들지 마라:"
+            echo "| 이렇게 쓰고 싶었다면 | 이렇게 쓴다 |"
+            echo "|---|---|"
+            echo "| \`research:\` \`record:\` \`anchor:\` | \`docs(research):\` \`docs:\` |"
+            echo "| \`decide:\` \`decision:\` \`audit:\` | \`docs(decision):\` \`docs(audit):\` |"
+            echo "| \`move:\` | \`refactor(layout):\` |"
+            echo "| \`deps:\` \`security:\` | \`build(deps):\` \`fix(security):\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
   diff-size:
     runs-on: ubuntu-latest
     timeout-minutes: 5

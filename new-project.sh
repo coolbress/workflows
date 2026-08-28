@@ -123,6 +123,14 @@ fi
 
 ( cd "$name" && git push -q )
 
+# PR 제목 타입 라벨. `label.yml` 이 제목에서 파생시켜 붙이고 `.github/release.yml` 이
+# 그 라벨로 릴리스 노트를 묶는다. 🔴 **라벨이 없으면 붙이기가 실패한다** — 여기서 만든다.
+# (라벨 워크플로에 생성 권한을 주지 않으려는 것이다. 그건 벽이 아니라 편의라 권한을 최소로 둔다.)
+for lbl in feat fix docs style refactor perf test build ci chore revert breaking; do
+  gh label create "$lbl" --repo "coolbress/$name" --color ededed \
+    --description "PR 제목 타입 (자동)" >/dev/null 2>&1 || true
+done
+
 # 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
 git -C "$name" diff --quiet || { git -C "$name" commit -qam "chore: 라이선스를 $lic 로 설정"; git -C "$name" push -q; }
