@@ -72,6 +72,11 @@ jobs:
       - name: 생성 스크립트 실패 경로
         run: ./tests/new-project-failpath.sh
 
+      # 지켜야 할 성질: **'왜' 없이는 릴리스가 안 나간다.**
+      # 빈 노트파일을 받아주면 이 도구는 `--generate-notes` 의 별칭이 된다.
+      - name: 릴리스 도구 가드
+        run: ./tests/make-release-guards.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
