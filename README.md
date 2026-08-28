@@ -311,6 +311,36 @@ commit SHA is immutable"* 이라 규정한다). **태그는 그 SHA 가 무엇�
 
 릴리스마다 **GitHub Release 에 변경 요약**을 적는다 — 호출부가 올릴지 말지를 그것만 보고 판단할 수 있게.
 
+**`project-template` 도 이제 릴리스한다** (2026-08-28 · `standards` R5-33). 규칙은 안 바뀌었고
+사실이 바뀌었다 — copier 로 넘어가면서 인스턴스의 `.copier-answers.yml` 이 템플릿을 참조한다.
+
+### 어떻게 만드나 — **왜**는 사람이 쓰고 **무엇**은 GitHub 이 만든다
+
+```bash
+tools/make-release.sh v3.4.0 /tmp/why.md      # 태그는 미리 밀어둔다
+```
+
+`--notes-file` 로 손으로 쓴 *왜* 를 얹고 `--generate-notes` 로 *무엇* 을 붙인다
+(`gh` 문서: *"Additional release notes can be **prepended** to the automatically generated notes"*).
+🔴 **빈 노트파일은 거부한다** — 받아주면 이 도구는 `--generate-notes` 의 별칭이 되고,
+그러면 릴리스마다 *왜* 가 사라진다. `tests/make-release-guards.sh` 가 그 성질을 지킨다.
+
+🔬 **왜 생성기만으로는 안 되나** (2026-08-28 실측). v3.2.0 → v3.3.0 에 돌린 결과는 전부 이것이다 —
+
+```
+## What's Changed
+* feat(ruleset): ci / diff-size 를 요구 검사로 만든다 by @coolbress in .../pull/26
+**Full Changelog**: .../compare/v3.2.0...v3.3.0
+```
+
+손으로 쓴 같은 릴리스의 노트에는 *"빨간 X 가 보이는 것과 머지가 막히는 것은 다른 문장이다"* 와
+*"`uses:` 로 부르는 쪽은 핀을 올릴 이유가 없다"* 가 있다. **소비자가 뭘 해야 하는가는 커밋 로그에 없다.**
+생성기는 우리 노트의 열등한 판이 아니라 **다른 물건**이다 — 설명이 아니라 **색인**이다.
+
+⚠️ **라벨을 안 쓰면 분류는 없다.** `.github/release.yml` 은 **라벨로** 묶는다.
+2026-08-28 실측: 세 저장소의 머지된 PR **68건 중 라벨이 붙은 것 0건.** 지금은 한 덩어리로 나온다 —
+색인으로는 그대로 쓸모 있고, 분류를 원하면 **라벨부터** 붙여야 한다.
+
 ## 근거
 
 설계 근거는 [`coolbress/standards`](https://github.com/coolbress/standards) 가 갖는다:
