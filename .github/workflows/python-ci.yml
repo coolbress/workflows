@@ -26,6 +26,21 @@ on:
         type: string
         default: "."
 
+      max-diff-lines:
+        description: |
+          한 PR 이 **리뷰 대상**으로 바꿀 수 있는 줄 수의 상한(추가 + 삭제).
+          `0` 을 주면 재기만 하고 막지 않는다.
+        type: number
+        default: 400
+
+      diff-size-exclude:
+        description: |
+          계수에서 뺄 경로 패턴. 공백으로 구분하고 git pathspec 으로 들어간다.
+          기본값이 문서와 락파일인 이유는 하나다 — **산문 한 줄과 `mypy --strict` 를
+          통과해야 하는 코드 한 줄은 리뷰 부담이 같지 않다.**
+        type: string
+        default: "*.md *.lock *lock.json *lock.yaml *lock.yml LICENSE"
+
 # 기본 토큰은 write-broad 다. 최소로 내린다 (같은 체크리스트: MUST).
 permissions:
   contents: read
@@ -109,6 +124,114 @@ jobs:
       - name: 시크릿 탐지 — 히스토리 포함
         working-directory: ${{ inputs.working-directory }}
         run: gitleaks git . --no-banner --redact
+
+  # 📏 diff 크기 — **리뷰 가능성의 게이트**다. 정확성이 아니라 사람이 볼 수 있는가를 본다.
+  #
+  # 🔴 이 잡이 생긴 이유: coolbress/divcal #1 에서 이슈 본문에 "PR diff 400줄 이하" 라고
+  # 적어놓고 436줄을 냈는데 **아무것도 막지 않았다.** 작성자가 자진 신고해서 알았을 뿐이다.
+  # 규칙이 문서에만 있으면 발화하지 않는다 — 그게 이 프로젝트가 반복해 죽은 형태다.
+  #
+  # 왜 지금인가(실측 2026): AI 보조 PR 은 사람 PR 의 **2.6배**(p75 408줄 대 157줄)이고,
+  # 에이전트가 연 PR 은 리뷰어 픽업까지 **5.3배** 오래 걸린다. 그리고 리뷰 공수를 예측하는
+  # 것은 **diff 크기**지 PR 본문이 아니다 — arXiv 2601.00753 에서 본문 텍스트는 AUC 0.57,
+  # 사실상 무의미했다. *"부담은 에이전트가 무엇을 건드렸는지로 정해지지 무엇을 말했는지로
+  # 정해지지 않는다."*
+  #
+  # 🔴 세는 방법이 규칙만큼 중요하다. 그 PR 을 이 계량기로 다시 재봤다(실측):
+  #   전부 세면 452줄(+436/-16) → 초과.  문서·락파일을 빼면 385줄(+375/-10) → 통과.
+  # **규칙이 틀린 게 아니라 계량기가 틀렸다.** README 산문 한 줄이 mypy strict 를 통과해야
+  # 하는 코드 한 줄과 같은 무게로 세어지고 있었다.
+  diff-size:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # base...head 를 계산하려면 양쪽 히스토리가 다 있어야 한다
+
+      - name: 리뷰 대상 diff 를 잰다
+        env:
+          MAX_LINES: ${{ inputs.max-diff-lines }}
+          EXCLUDE: ${{ inputs.diff-size-exclude }}
+          WORKDIR: ${{ inputs.working-directory }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # 🔴 PR 이 아닐 때 **잡을 건너뛰지 않고 통과로 보고한다.**
+          # `if:` 로 잡을 통째로 건너뛰면 검사 이름이 보고되지 않는 경로가 생기고,
+          # 룰셋이 언젠가 그 이름을 요구하는 순간 저장소가 조용히 머지 불가로 잠긴다.
+          # 이 저장소가 가장 경계하는 실패라서 조건을 잡이 아니라 **스텝 안**에 둔다.
+          if [ -z "$BASE_SHA" ] || [ -z "$HEAD_SHA" ]; then
+            echo "PR 이 아니다 — 잴 diff 가 없다."
+            echo "### 📏 diff 크기 — PR 이 아니라 재지 않았다" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          root="${WORKDIR%/}"
+          if [ -z "$root" ] || [ "$root" = "." ]; then
+            prefix=""
+            spec=(".")
+          else
+            prefix="$root/"
+            spec=("$root")
+          fi
+
+          patterns=()
+          if [ -n "$EXCLUDE" ]; then
+            read -r -a patterns <<< "$EXCLUDE"
+          fi
+          for p in ${patterns+"${patterns[@]}"}; do
+            spec+=(":(exclude)${prefix}${p}")
+          done
+
+          # 세 점(base...head)은 머지베이스부터의 변경이다 — GitHub 이 PR 에 보여주는 것과 같다.
+          if ! numstat="$(git diff --numstat "${BASE_SHA}...${HEAD_SHA}" -- "${spec[@]}")"; then
+            echo "::error::diff 를 계산하지 못했다 (base=${BASE_SHA} head=${HEAD_SHA})."
+            exit 1
+          fi
+
+          added=0
+          removed=0
+          while read -r a d _; do
+            if [ -z "$a" ] || [ "$a" = "-" ]; then   # 빈 줄 · 바이너리
+              continue
+            fi
+            added=$((added + a))
+            removed=$((removed + d))
+          done <<< "$numstat"
+          total=$((added + removed))
+
+          {
+            echo "### 📏 diff 크기"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 리뷰 대상 변경 | **${total}줄** (+${added} / -${removed}) |"
+            echo "| 상한 | ${MAX_LINES}줄 |"
+            echo "| 계수에서 뺀 것 | \`${EXCLUDE}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$MAX_LINES" -le 0 ]; then
+            echo "상한이 0 이다 — 재기만 하고 막지 않는다: ${total}줄"
+            exit 0
+          fi
+
+          if [ "$total" -gt "$MAX_LINES" ]; then
+            echo "::error::리뷰 대상 diff 가 ${total}줄이다 (상한 ${MAX_LINES}). 쪼개라."
+            {
+              echo
+              echo "🔴 **상한을 넘었다.** 문서와 락파일은 이미 뺀 숫자다."
+              echo
+              echo "쪼개는 법: 한 덩어리를 의존 사슬로 갈라 **스택**으로 낸다"
+              echo "(데이터 → API → 배선 → UX). 층마다 리뷰어가 달라질 수 있다."
+              echo "\`gh stack\` 이 그걸 한다."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "✅ ${total}줄 / 상한 ${MAX_LINES}줄"
 
   build:
     runs-on: ubuntu-latest
