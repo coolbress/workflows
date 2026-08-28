@@ -48,12 +48,12 @@ chk '머지는 squash 뿐' \
     '.rules[]|select(.type=="pull_request").parameters.allowed_merge_methods' '["squash"]'
 
 # ── 기계 판정 ────────────────────────────────────────────────
-# 이름은 {호출잡}/{피호출잡} 이다. 호출부 잡 이름 `ci` + 재사용 워크플로의 4잡.
+# 이름은 {호출잡}/{피호출잡} 이다. 호출부 잡 이름 `ci` + 재사용 워크플로의 잡들.
 # 여기와 project-template/.github/workflows/ci.yml 과 python-ci.yml 이
 # 셋 다 맞아야 성립한다 — 하나만 이름이 바뀌면 저장소가 머지 불가로 잠긴다.
-chk '요구하는 검사는 lint·typecheck·test·build·secrets·CodeQL' \
+chk '요구하는 검사 목록이 python-ci.yml 의 잡과 일치한다' \
     '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context]' \
-    '["ci / lint","ci / typecheck","ci / test","ci / build","ci / secrets","CodeQL"]'
+    '["ci / lint","ci / typecheck","ci / test","ci / build","ci / secrets","ci / diff-size","CodeQL"]'
 # 이름만 요구하면 아무나 그 이름으로 초록을 올릴 수 있다. 출처를 고정한다.
 # 🔴 출처가 **둘**이다 — `ci / *` 는 GitHub Actions(15368), `CodeQL` 은
 # code scanning(57789 · github-advanced-security). 하나로 뭉뚱그리면 안 된다.
