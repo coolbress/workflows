@@ -336,8 +336,17 @@ PR 제목  ──ci / pr-title 이 강제──→  타입이 표준 11종인가
 근거는 `standards` [`direction/05`](https://github.com/coolbress/standards/blob/main/direction/05-the-output-floor.md) §정정
 (2026-08-28): 확장 어휘를 문서에 적어두는 방식이 **하루를 못 버텼다.**
 
-⚠️ **`ci / pr-title` 을 룰셋에 넣기 전에 핀을 먼저 올려라.** 옛 SHA 에 핀된 저장소에는 그 잡이
-없으므로 **검사 이름이 영원히 보고되지 않아 저장소가 잠긴다.** 순서는 언제나 **핀 → 룰셋**이다.
+✅ **`ci / pr-title` 은 `ruleset.json` 에 들어갔다** (v3.6.0) — **새 저장소는 처음부터 벽이다.**
+순서를 지켜서 넣었다: v3.5.0 배포 → 모든 소비자 핀 갱신 → **그다음** 룰셋.
+
+⚠️ **기존 저장소는 소유자가 올려야 한다** — 옛 SHA 에 핀된 저장소에 이 검사를 요구하면
+그 잡이 없어 **검사 이름이 영원히 보고되지 않아 저장소가 잠긴다.** 순서는 언제나 **핀 → 룰셋**이다.
+
+```bash
+./tools/upgrade-ruleset.sh --dry-run coolbress/<repo> 'ci / pr-title:15368'   # 읽기만
+cd ~ && ~/workflows/tools/with-admin-token.sh \
+  ~/workflows/tools/upgrade-ruleset.sh coolbress/<repo> 'ci / pr-title:15368'
+```
 
 ### 어떻게 만드나 — **왜**는 사람이 쓰고 **무엇**은 GitHub 이 만든다
 
