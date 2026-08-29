@@ -1,0 +1,25 @@
+{
+  "name": "coolbress-standards",
+  "displayName": "coolbress standards",
+  "description": "이 저장소들의 진입로 — /kickoff · new-project · 정본이 어디 있는지. 훅 없음.",
+  "version": "0.1.0",
+  "author": {
+    "name": "coolbress"
+  },
+  "homepage": "https://github.com/coolbress/standards",
+  "repository": "https://github.com/coolbress/workflows",
+  "license": "MIT",
+  "keywords": [
+    "standards",
+    "kickoff",
+    "scaffold",
+    "governance"
+  ],
+  "commands": "./commands",
+  "skills": "./skills",
+  "dependencies": [
+    "mattpocock-skills",
+    "taste-skill",
+    "last30days"
+  ]
+}
