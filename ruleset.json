@@ -63,6 +63,10 @@
             "integration_id": 15368
           },
           {
+            "context": "ci / deps",
+            "integration_id": 15368
+          },
+          {
             "context": "ci / diff-size",
             "integration_id": 15368
           },
