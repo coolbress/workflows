@@ -13,6 +13,8 @@ actionlint .github/workflows/*.yml
 ./tests/new-project-failpath.sh           # gh 를 목으로 바꿔 전 단계에서 실패시킨다
 ./tests/make-release-guards.sh
 ./tests/pr-title-cases.sh                 # 규칙은 python-ci.yml 에서 뽑아 쓴다
+./tests/plugin-hooks.sh                   # 훅이 세션을 막지 않는가
+claude plugin validate . && claude plugin validate plugins/*  # 마켓·플러그인
 ```
 
 ## 🔴 ALWAYS

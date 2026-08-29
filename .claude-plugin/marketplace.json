@@ -1,13 +1,21 @@
 {
   "name": "coolbress",
   "description": "coolbress 의 표준 배포 — 안내 층만 담는다. 벽은 GitHub 에 있다.",
-  "owner": { "name": "coolbress" },
+  "owner": {
+    "name": "coolbress"
+  },
   "plugins": [
     {
       "name": "coolbress-standards",
       "description": "진입로와 정본 지도. 훅 없음 — 기본 프로필.",
       "category": "workflow",
       "source": "./plugins/standards"
+    },
+    {
+      "name": "coolbress-standards-hooks",
+      "description": "기본 + 세션 시작 훅 + ponytail. 훅은 여기에만 있다 — 옵트인.",
+      "category": "workflow",
+      "source": "./plugins/standards-hooks"
     }
   ]
 }

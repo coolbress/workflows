@@ -1,0 +1,13 @@
+{
+  "name": "coolbress-standards-hooks",
+  "displayName": "coolbress standards (+훅)",
+  "description": "기본 프로필에 세션 시작 훅과 ponytail 을 더한다. 옵트인 — 훅은 여기에만 있다.",
+  "version": "0.1.0",
+  "author": { "name": "coolbress" },
+  "homepage": "https://github.com/coolbress/standards",
+  "repository": "https://github.com/coolbress/workflows",
+  "license": "MIT",
+  "keywords": ["standards", "hooks", "session"],
+  "hooks": "./hooks/hooks.json",
+  "dependencies": ["coolbress-standards", "ponytail"]
+}
