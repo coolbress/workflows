@@ -1,7 +1,13 @@
 ---
 description: PR 을 열기 전에 diff 를 제3자에게 리뷰시킨다. 외부 모델을 먼저 쓴다.
 argument-hint: "[--base <ref>]"
+disable-model-invocation: true
 ---
+
+<!-- 🔴 **사용자 전용이다.** 이유가 둘이다.
+     ① 외부 모델 호출은 **비용**이고, 되먹임 루프(수정 → 재리뷰 → 재수정)가 실사용에서 보고된 위험이다.
+     ② 🔴 **`/codex:review` 자체가 `disable-model-invocation: true` 다** — 모델이 이 커맨드를 부르면
+        정작 시키는 일을 못 해서 **막다른 길**로 간다. 실측 확인(2026-08-30). -->
 
 # diff 리뷰 — **제3자에게 맡긴다**
 
