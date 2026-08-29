@@ -229,17 +229,26 @@ copier 는 인스턴스에 **`.copier-answers.yml`** 을 남겨 *어느 판에�
 라이선스는 **GitHub 공식 라이선스 API 의 본문**을 그대로 쓴다(`/licenses/<spdx>`).
 교체는 **룰셋을 걸기 전에** 한다 — 건 뒤에는 `main` 직접 푸시가 막혀 PR 없이 못 바꾼다.
 
-## `/kickoff` — 아이디어를 과제로
+## 플러그인 — `/kickoff` 과 `/new-project`
 
-`commands/kickoff.md` 는 Claude Code 슬래시 커맨드다. 한 번 걸어둔다:
+**이 저장소가 마켓플레이스다.** 커맨드와 스킬은 플러그인으로 배포한다:
 
 ```bash
-mkdir -p ~/.claude/commands
-ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/kickoff.md
+claude plugin marketplace add coolbress/workflows
+claude plugin install coolbress-standards@coolbress
 ```
 
-**심볼릭 링크인 이유**: 커맨드 본문이 이 저장소에 살아야 벽 안에서 버전 관리되고,
-`git pull` 만으로 갱신이 전파된다. `~/.claude/` 에 사본을 두면 어느 쪽이 최신인지 모르게 된다.
+담는 것: `/kickoff`(아이디어 → 과제) · `/new-project`(벽이 선 저장소) ·
+`where-is-the-truth` 스킬(정본이 어디 있나). **훅 없음** — 기본 프로필이다.
+
+🔴 **벽은 플러그인에 안 들어간다.** 들어가는 순간 에이전트가 끌 수 있고, 그러면 벽이 아니다.
+플러그인은 **벽을 세우는 도구**를 담을 뿐이고 벽 자체는 GitHub 에 남는다.
+
+> 🔵 **왜 심볼릭 링크에서 플러그인으로 옮겼나** (2026-08-29)
+> 옛 방식은 `ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/` 였다 — **사람이 매 기계에서
+> 손으로** 걸어야 했고, 새 커맨드가 늘 때마다 한 줄씩 늘었다. 플러그인은 **버전과 핀이 공짜**로 따라오고
+> 의존성(`mattpocock-skills` 등)까지 **전이적으로** 켜준다.
+> ⚠️ 옛 경로(`commands/`)는 **심볼릭 링크로 남겨** 이미 걸어둔 링크가 안 깨진다.
 
 인터뷰는 아이디어를 **인수기준이 검사에 매핑된 GitHub 이슈**로 바꾼다.
 근거는 `coolbress/standards` 의 `corpus/aspects/01-requirements-planning/elicitation-interview-build-standard.md`
