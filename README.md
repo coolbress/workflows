@@ -258,18 +258,24 @@ claude plugin install coolbress-standards-hooks@coolbress   # +훅
 🔴 **Claude Code 에는 프로필 개념이 없다.** ECC 는 그걸 **자체 설치 스크립트**로 만드는데,
 **설치기는 하네스의 시작이다.** 우리는 네이티브 `dependencies` 로 같은 것을 얻는다.
 
-### 의존성이 사는 마켓플레이스
+### 의존성은 **이 마켓이 직접 핀해서 등재한다**
 
-`mattpocock-skills` 는 **공식 마켓**에 있어 그냥 잡힌다. 나머지는 마켓을 먼저 더한다:
+🔴 **실측으로 배웠다 (2026-08-29)** — `dependencies` 의 이름은 **선언한 플러그인과 같은 마켓 안에서** 풀린다.
+바깥 마켓을 부르려면 `marketplace` 필드 **+ 루트 마켓의 `allowCrossMarketplaceDependenciesOn` 허용목록**이 필요하다.
+(첫 설치가 `Dependency "mattpocock-skills@coolbress" is not installed` 로 **통째로 실패**했다.)
 
-```bash
-claude plugin marketplace add Leonxlnx/taste-skill
-claude plugin marketplace add mvanhorn/last30days-skill
-claude plugin marketplace add DietrichGebert/ponytail   # +훅 쪽만 필요
-```
+그래서 둘로 갈랐다:
 
-⚠️ **미검증 가정 하나** — 다른 마켓의 플러그인을 `dependencies` 로 거는 것이
-**마켓을 먼저 더하지 않아도** 풀리는지 확인하지 않았다. 안 풀리면 위 세 줄이 **선행 조건**이다.
+| 의존성 | 어떻게 | 왜 |
+|---|---|---|
+| `mattpocock-skills` | **교차 마켓**(`claude-plugins-official`) + 허용목록 | 공식 마켓이 **이미 SHA 로 핀한다.** 베끼지 않는다 |
+| `taste-skill` · `last30days` · `ponytail` | **이 마켓이 `sha` 로 직접 등재** | 아무도 안 핀해준다. 공식 마켓이 291개 중 238개에서 쓰는 그 방식이다 |
+
+⚠️ **허용목록은 공짜가 아니다.** 기본값이 차단인 이유는 *"한 마켓이 검토하지 않은 출처를 조용히 끌어오는 것"* 을 막기 위해서다.
+우리는 **네 후보를 전부 실측하고**(라이선스·훅·규모 — [`standards` PLUGIN-DESIGN](https://github.com/coolbress/standards/blob/main/audit/PLUGIN-DESIGN.ko.md))
+공식 마켓 **하나만** 허용목록에 넣었다.
+
+🔴 **핀을 올리는 것은 PR 이다** — `sha` 를 손으로 바꾸고 리뷰를 태운다.
 
 > 🔵 **왜 심볼릭 링크에서 플러그인으로 옮겼나** (2026-08-29)
 > 옛 방식은 `ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/` 였다 — **사람이 매 기계에서
