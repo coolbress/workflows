@@ -131,6 +131,21 @@ for lbl in feat fix docs style refactor perf test build ci chore revert breaking
     --description "PR 제목 타입 (자동)" >/dev/null 2>&1 || true
 done
 
+# 🔴 회부(HITL) 라벨. 없으면 새 저장소에서 **결정을 이슈로 남길 수가 없다** —
+# `standards` 의 `check_decision_referrals.py` 가 이 라벨로 분모를 센다.
+# 종류를 셋으로 가르는 이유: Approval·Input·Escalation 은 **트리거도 대기 방식도 다르다**
+# (12-Factor Agents Factor 7 계열 · `standards` direction/06 §회부 규율).
+gh label create "decision" --repo "coolbress/$name" --color 0e8a16 \
+  --description "소유자에게 회부한 결정" >/dev/null 2>&1 || true
+gh label create "decision:approval" --repo "coolbress/$name" --color d93f0b \
+  --description "되돌리기 어려운 행동의 가부" >/dev/null 2>&1 || true
+gh label create "decision:input" --repo "coolbress/$name" --color 1d76db \
+  --description "에이전트에게 없는 정보·취향" >/dev/null 2>&1 || true
+gh label create "decision:escalation" --repo "coolbress/$name" --color b60205 \
+  --description "막혔다 — 권한 없음 · 반복 실패" >/dev/null 2>&1 || true
+gh label create "needs-simpler" --repo "coolbress/$name" --color fbca04 \
+  --description "다시 쉽게 설명해달라" >/dev/null 2>&1 || true
+
 # 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
 git -C "$name" diff --quiet || { git -C "$name" commit -qam "chore: 라이선스를 $lic 로 설정"; git -C "$name" push -q; }
