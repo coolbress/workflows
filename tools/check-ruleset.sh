@@ -53,7 +53,7 @@ chk '머지는 squash 뿐' \
 # 셋 다 맞아야 성립한다 — 하나만 이름이 바뀌면 저장소가 머지 불가로 잠긴다.
 chk '요구하는 검사 목록이 python-ci.yml 의 잡과 일치한다' \
     '[.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context]' \
-    '["ci / pr-title","ci / lint","ci / typecheck","ci / test","ci / build","ci / secrets","ci / diff-size","CodeQL"]'
+    '["ci / pr-title","ci / lint","ci / typecheck","ci / test","ci / build","ci / secrets","ci / deps","ci / diff-size","CodeQL"]'
 # 이름만 요구하면 아무나 그 이름으로 초록을 올릴 수 있다. 출처를 고정한다.
 # 🔴 출처가 **둘**이다 — `ci / *` 는 GitHub Actions(15368), `CodeQL` 은
 # code scanning(57789 · github-advanced-security). 하나로 뭉뚱그리면 안 된다.
