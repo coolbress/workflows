@@ -82,6 +82,11 @@ jobs:
       - name: PR 제목 판정 규칙
         run: ./tests/pr-title-cases.sh
 
+      # 🔴 훅이 세션을 막으면 안 된다. fail-open 을 검사로 잠근다 —
+      # 보여주는 훅이 일을 막으면 그건 벽 흉내이고, 벽은 GitHub 에 있다.
+      - name: 플러그인 훅 (fail-open · 길이 · 네트워크 없음)
+        run: ./tests/plugin-hooks.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.

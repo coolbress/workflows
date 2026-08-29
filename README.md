@@ -244,6 +244,33 @@ claude plugin install coolbress-standards@coolbress
 🔴 **벽은 플러그인에 안 들어간다.** 들어가는 순간 에이전트가 끌 수 있고, 그러면 벽이 아니다.
 플러그인은 **벽을 세우는 도구**를 담을 뿐이고 벽 자체는 GitHub 에 남는다.
 
+### 프로필 둘 — **플러그인 둘이다**
+
+| | 담는 것 |
+|---|---|
+| `coolbress-standards` | 커맨드·스킬. **훅 없음** |
+| `coolbress-standards-hooks` | 위 + **세션 시작 훅** + `ponytail`. **훅은 여기에만** |
+
+```bash
+claude plugin install coolbress-standards-hooks@coolbress   # +훅
+```
+
+🔴 **Claude Code 에는 프로필 개념이 없다.** ECC 는 그걸 **자체 설치 스크립트**로 만드는데,
+**설치기는 하네스의 시작이다.** 우리는 네이티브 `dependencies` 로 같은 것을 얻는다.
+
+### 의존성이 사는 마켓플레이스
+
+`mattpocock-skills` 는 **공식 마켓**에 있어 그냥 잡힌다. 나머지는 마켓을 먼저 더한다:
+
+```bash
+claude plugin marketplace add Leonxlnx/taste-skill
+claude plugin marketplace add mvanhorn/last30days-skill
+claude plugin marketplace add DietrichGebert/ponytail   # +훅 쪽만 필요
+```
+
+⚠️ **미검증 가정 하나** — 다른 마켓의 플러그인을 `dependencies` 로 거는 것이
+**마켓을 먼저 더하지 않아도** 풀리는지 확인하지 않았다. 안 풀리면 위 세 줄이 **선행 조건**이다.
+
 > 🔵 **왜 심볼릭 링크에서 플러그인으로 옮겼나** (2026-08-29)
 > 옛 방식은 `ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/` 였다 — **사람이 매 기계에서
 > 손으로** 걸어야 했고, 새 커맨드가 늘 때마다 한 줄씩 늘었다. 플러그인은 **버전과 핀이 공짜**로 따라오고
