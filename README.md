@@ -277,6 +277,30 @@ claude plugin install coolbress-standards-hooks@coolbress   # +훅
 
 🔴 **핀을 올리는 것은 PR 이다** — `sha` 를 손으로 바꾸고 리뷰를 태운다.
 
+### 리뷰어를 **당신 것으로** 바꾼다 (`userConfig`)
+
+`/review` 는 **외부 모델을 먼저** 쓴다. 기본값은 `codex` 이고, 설치할 때나 나중에 바꿀 수 있다:
+
+```bash
+claude plugin install coolbress-standards@coolbress --config reviewer=codex
+claude plugin install coolbress-standards@coolbress --config reviewer=none   # 외부 모델이 없을 때
+```
+
+`/plugin` 에서도 바꿀 수 있다. **값은 문자열이다** — Claude Code 의 `userConfig` 에는
+**드롭다운(enum)이 없어서** 값을 설명에 적고 커맨드가 해석한다.
+
+| 값 | 무슨 일이 |
+|---|---|
+| `codex`(기본) | `/codex:review` · `/codex:adversarial-review` 로 보낸다 |
+| 그 밖의 이름 | 그 도구의 리뷰 명령을 쓰거나, diff 를 붙여넣고 **2축**(Standards·Spec)으로 묻는다 |
+| `none` | 🔶 Claude Code 내부로 떨어진다. **제3자성이 없다는 것을 사용자에게 말한다** |
+
+🔴 **왜 외부를 먼저 쓰나** — 같은 세션의 같은 모델이 자기 diff 를 보는 것은 **제3자가 아니다.**
+통제실험이 **컨텍스트 분리**의 효과를 보였다(`standards` 코퍼스 `IPW-006`).
+
+⚠️ **어느 쪽이든 리뷰는 안전망이 아니다** — 최선 조건에서도 **F1 28.6%**(오류의 71% 를 놓친다 · `IPW-007`).
+**판정은 벽이 한다.**
+
 > 🔵 **왜 심볼릭 링크에서 플러그인으로 옮겼나** (2026-08-29)
 > 옛 방식은 `ln -s ~/workflows/commands/kickoff.md ~/.claude/commands/` 였다 — **사람이 매 기계에서
 > 손으로** 걸어야 했고, 새 커맨드가 늘 때마다 한 줄씩 늘었다. 플러그인은 **버전과 핀이 공짜**로 따라오고
