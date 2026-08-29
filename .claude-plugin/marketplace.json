@@ -16,6 +16,39 @@
       "description": "기본 + 세션 시작 훅 + ponytail. 훅은 여기에만 있다 — 옵트인.",
       "category": "workflow",
       "source": "./plugins/standards-hooks"
+    },
+    {
+      "name": "taste-skill",
+      "description": "프론트엔드 anti-slop. 범위: 랜딩·포트폴리오·리디자인",
+      "category": "workflow",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Leonxlnx/taste-skill.git",
+        "sha": "ccbc15639c97057cbfcf32ecebc38ef716e4bb37"
+      }
+    },
+    {
+      "name": "last30days",
+      "description": "최근 반응과 새 후보를 찾는다. 🔴 판정에는 쓰지 않는다",
+      "category": "workflow",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/mvanhorn/last30days-skill.git",
+        "sha": "a218edadbc3361672f5e5e2cd72a8212b0b3fbb8"
+      }
+    },
+    {
+      "name": "ponytail",
+      "description": "먼저 찾고 최소한으로 구현한다. 훅 3종이라 +훅 쪽에만 건다",
+      "category": "workflow",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/DietrichGebert/ponytail.git",
+        "sha": "2ed6c52c9d7e5e56942508591085fd45dea277d3"
+      }
     }
+  ],
+  "allowCrossMarketplaceDependenciesOn": [
+    "claude-plugins-official"
   ]
 }

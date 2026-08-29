@@ -18,7 +18,10 @@
   "commands": "./commands",
   "skills": "./skills",
   "dependencies": [
-    "mattpocock-skills",
+    {
+      "name": "mattpocock-skills",
+      "marketplace": "claude-plugins-official"
+    },
     "taste-skill",
     "last30days"
   ]
