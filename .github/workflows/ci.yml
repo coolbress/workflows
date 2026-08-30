@@ -136,6 +136,10 @@ jobs:
       - name: 입력이 실제로 넘겨지나 (`if:` 로 막힌 것)
         run: ./tests/inputs-are-exercised.sh
 
+      # 🔴 아키타입 목록의 정본은 템플릿의 copier.yml 이다. 여기 베끼면 갈린다 — 갈렸었다.
+      - name: 아키타입 목록이 한 곳에서만 오나
+        run: ./tests/archetype-single-source.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
