@@ -99,6 +99,11 @@ jobs:
       # 보여주는 훅이 일을 막으면 그건 벽 흉내이고, 벽은 GitHub 에 있다.
       - name: 플러그인 훅 (fail-open · 길이 · 네트워크 없음)
         run: ./tests/plugin-hooks.sh
+
+      # 🔴 "안 고친다" 는 산문이 아니라 **장치**여야 한다. 그리고 `allowed-tools` 는
+      # 잠그는 게 아니라 **푸는 것**이다 — 그 혼동이 들어오는 것도 막는다.
+      - name: 플러그인 매니페스트 (읽기전용 집행 · 버전 일치 · SHA 핀)
+        run: ./tests/plugin-manifests.sh
       - name: 룰셋 갱신 — 이름 가드 (오지 않을 검사를 요구하면 머지 불가가 된다)
         run: ./tests/upgrade-ruleset-guard.sh
 

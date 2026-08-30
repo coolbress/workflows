@@ -10,14 +10,14 @@
       "description": "진입로와 정본 지도. 훅 없음 — 기본 프로필.",
       "category": "workflow",
       "source": "./plugins/standards",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "coolbress-standards-hooks",
       "description": "기본 + 세션 시작 훅 + ponytail. 훅은 여기에만 있다 — 옵트인.",
       "category": "workflow",
       "source": "./plugins/standards-hooks",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "taste-skill",

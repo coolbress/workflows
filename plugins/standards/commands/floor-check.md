@@ -1,7 +1,20 @@
 ---
 description: 기존 저장소에 바닥이 깔려 있는지 읽기 전용으로 보고 조언한다. 아무것도 고치지 않는다.
 argument-hint: "[owner/name]"
+disallowed-tools: Edit, Write, NotebookEdit
 ---
+
+<!-- 🔴 **"안 고친다" 는 산문이 아니라 장치여야 한다.**
+     이 커맨드는 제목부터 *읽고, 말하고, 안 고친다* 인데 **아무것도 그걸 집행하지 않았다.**
+     `disallowed-tools` 가 **도구를 실제로 뺀다** — 1차 문서:
+     *"Tools removed from Claude's available pool while this skill is active."*
+
+     ⚠️ **`allowed-tools` 가 아니다.** 그건 반대다 —
+     *"Tools Claude can use **without asking permission**"*, 즉 **잠그는 게 아니라 푸는 것**이다.
+     (2026-08-30: 웹의 요약 여러 곳이 `allowed-tools` 를 *잠금* 이라고 적는다. 1차 문서가 아니다.)
+
+     🔴 **`Bash` 는 빼지 않는다** — 이 커맨드의 본체가 `repo_audit.py` 실행이다.
+     빼면 커맨드가 아무 일도 못 한다. 막는 것은 **쓰기 도구**다. -->
 
 # 바닥 점검 — **읽고, 말하고, 안 고친다**
 
