@@ -67,10 +67,31 @@ fi
 # 기본은 가장 좁은 것이다: 넓히는 것은 파일을 더하는 일이고, 좁히는 것은
 # 안 쓰는 파일을 지우는 일이라 스텁으로 남는다.
 arch="${arch:-cli}"
-case "$arch" in
-  cli|library|service|data-ml) ;;
-  *) echo "모르는 아키타입: $arch  (cli · library · service · data-ml)" >&2; exit 2 ;;
-esac
+
+# 🔴 **아키타입 목록의 정본은 템플릿의 `copier.yml` 이다.** 여기 베껴두면 갈린다 —
+# 실측(2026-08-30): 이 줄에 `service` 가 박혀 있었다. 템플릿은 진작 `backend` 로 바꿨는데
+# 여기만 안 따라와서 **맞는 값(`backend`)이 거부되고 없는 값(`service`)은 저장소를 만든
+# 뒤에야 죽었다**(copier 가 거부 → trap 이 지운다). fail-closed 는 성립했지만
+# **사용자는 왕복 한 번을 버렸고 엉뚱한 오류를 봤다.**
+#
+# 그래서 **템플릿에서 읽어온다.** 못 읽으면 막지 않고 넘긴다 — copier 가 어차피 거부하고
+# trap 이 지운다. **여기서 죽이는 값을 여기가 정하지 않는다.**
+choices="$(
+  gh api repos/coolbress/project-template/contents/copier.yml --jq .content 2>/dev/null \
+    | base64 -d 2>/dev/null \
+    | sed -n '/^archetype:/,/^[a-z_]/p' \
+    | sed -n 's/^    [^:]*: \([a-z][a-z0-9-]*\)$/\1/p'
+)" || choices=""
+
+if [ -n "$choices" ]; then
+  if ! printf '%s\n' "$choices" | grep -qxF "$arch"; then
+    echo "모르는 아키타입: $arch" >&2
+    echo "  템플릿이 받는 것: $(printf '%s' "$choices" | tr '\n' ' ')" >&2
+    exit 2
+  fi
+else
+  echo "⚠️ 템플릿의 아키타입 목록을 못 읽었다 — copier 가 판정한다(틀리면 trap 이 지운다)." >&2
+fi
 
 created=0
 cleanup() {
@@ -130,6 +151,12 @@ for lbl in feat fix docs style refactor perf test build ci chore revert breaking
   gh label create "$lbl" --repo "coolbress/$name" --color ededed \
     --description "PR 제목 타입 (자동)" >/dev/null 2>&1 || true
 done
+
+# `task` 라벨. 🔴 **`bug`·`enhancement` 는 GitHub 기본 라벨이라 있는데 `task` 는 없다** —
+# 그래서 `task.yml` 폼만 라벨이 비어 있었다(2026-08-30 실측). `/kickoff` 이 만드는 과제가
+# 버그 신고와 안 갈려서 `gh issue list` 로 *다음 할 일* 을 못 추린다.
+gh label create "task" --repo "coolbress/$name" --color 0052cc \
+  --description "만들 것 하나 (인수기준이 검사에 매핑된다)" >/dev/null 2>&1 || true
 
 # 🔴 회부(HITL) 라벨. 없으면 새 저장소에서 **결정을 이슈로 남길 수가 없다** —
 # `standards` 의 `check_decision_referrals.py` 가 이 라벨로 분모를 센다.
