@@ -42,6 +42,22 @@ for c in new-project review; do
   fi
 done
 
+# ── 🔴 `hooks/hooks.json` 은 **자동 발견된다.** manifest 에 또 적으면 두 번 로드돼
+#    플러그인 전체가 `failed to load` 가 된다. 실측(2026-08-30):
+#    "Duplicate hooks file detected … The standard hooks/hooks.json is loaded automatically,
+#     so manifest.hooks should only reference additional hook files."
+#    ⚠️ `claude plugin validate` 는 이것을 **통과시킨다** — 설치하고 재시작해야 보인다.
+#    그래서 여기서 막는다. **manifest 는 표준 경로를 가리키면 안 된다.**
+for m in "$root"/plugins/*/.claude-plugin/plugin.json; do
+  name="$(basename "$(dirname "$(dirname "$m")")")"
+  if python3 -c "
+import json,sys
+d=json.load(open(sys.argv[1]))
+sys.exit(0 if d.get('hooks') in ('./hooks/hooks.json','hooks/hooks.json') else 1)" "$m"
+  then bad "🔴 $name: manifest 가 표준 hooks 경로를 가리킨다 — 두 번 로드돼 안 뜬다"
+  else ok "$name: 표준 hooks 경로를 중복 선언하지 않는다"; fi
+done
+
 # ── ③ 버전이 매니페스트 셋에서 같다 — 갈리면 소비자가 무엇을 가졌는지 모른다
 vs="$(grep -ho '"version": "[^"]*"' \
       "$root/plugins/standards/.claude-plugin/plugin.json" \
