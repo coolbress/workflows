@@ -138,3 +138,7 @@ jobs:
     uses: ./.github/workflows/python-ci.yml
     with:
       working-directory: canary
+      # 🔴 **입력이 있는 것과 도는 것은 다르다.** 카나리가 실제로 넘겨야 그 경로가 돈다 —
+      # 안 넘기면 `extra-python-versions` 는 아무 데서도 안 돌고 그걸 아무도 모른다
+      # (오늘 `security-setting.sh` 가 정확히 그렇게 배선이 빠진 채 초록이었다).
+      extra-python-versions: "3.13"
