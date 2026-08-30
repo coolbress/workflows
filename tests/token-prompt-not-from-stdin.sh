@@ -26,7 +26,9 @@ pid, master = pty.fork()          # slave 가 자식의 controlling terminal 이
 if pid == 0:
     os.dup2(r, 0)                 # 🔴 stdin 만 파이프로 바꾼다 — /dev/tty 는 그대로 pty
     # exec 되는 명령은 남은 stdin 을 그대로 뱉는다. 먹혔으면 아무것도 안 나온다.
-    os.execv("/bin/sh", ["/bin/sh", script, "/bin/sh", "-c", "cat"])
+    # 🔴 셔뱅으로 실행한다. `/bin/sh script` 로 부르면 우분투에선 dash 가 받아
+    # `set -o pipefail` 에서 죽는다 — macOS 는 /bin/sh 가 bash 라 안 보인다(CI 가 잡았다).
+    os.execv(script, [script, "/bin/sh", "-c", "cat"])
     os._exit(127)
 
 os.write(master, b"ghp_" + b"x" * 36 + b"\n")
