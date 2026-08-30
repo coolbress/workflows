@@ -15,14 +15,20 @@ set -u
 cat <<'TXT'
 ## 정본이 어디 있나 (SessionStart)
 
-- **왜** 이 규칙이 있나 → `coolbress/standards` (`direction/` 방향 · `corpus/` 근거 · `audit/` 격차)
-- **벽과 생성기** → `coolbress/workflows` (재사용 CI · `ruleset.json` · `new-project.sh`)
-- **새 프로젝트가 받는 것** → `coolbress/project-template`
+- **왜** 이 규칙이 있나 → `coolbress/standards` (`direction/` · `corpus/` · `audit/`)
+- **벽과 생성기** → `coolbress/workflows` · **새 프로젝트가 받는 것** → `coolbress/project-template`
+- 자세한 것은 `where-is-the-truth` 스킬
 
-**바깥을 열기 전에 발밑을 본다** — `gh issue list` · `AGENTS.md` · `CONTRIBUTING.md`.
-가변 상태의 정본은 **파일이 아니라 이슈다.**
+**바깥을 열기 전에 발밑을 본다** — 가변 상태의 정본은 파일이 아니라 `gh issue list` 다.
 
-자세한 것은 `where-is-the-truth` 스킬에 있다.
+## 무기고 — 🔴 **기억에서 답하기 전에 여기를 본다**
+
+도구는 다 있는데 **쓰라는 말이 없어서** 안 쓰는 것이 실패 형태다.
+
+- 계획·명세·제약 → `mattpocock-skills` · 프론트엔드 anti-slop → `taste-skill`(랜딩·리디자인만)
+- 최근 반응·새 후보 → `last30days` 🔴 **발견용이지 판정용이 아니다**
+
+⚠️ **고르는 것은 너다** — 있다는 사실이지 쓰라는 명령이 아니다.
 TXT
 
 exit 0
