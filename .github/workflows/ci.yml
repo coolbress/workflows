@@ -28,6 +28,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # 🔴 체크아웃은 기본으로 토큰을 `.git/config` 에 남긴다. 워크스페이스째
+          # 아티팩트로 올리면 그게 같이 나간다(zizmor `artipacked`).
+          # 이 저장소의 잡은 **아무것도 푸시하지 않는다** — 그래서 끈다.
+          persist-credentials: false
 
       # 🔴 `docker://` 로 쓰지 않는다 — 그 형태가 **두 번 값을 치렀다**:
       #   ① Actions allowlist 패턴에 `docker://` 가 들어가지 않아 이 저장소만 allowlist 를 못 걸었다
@@ -63,6 +68,14 @@ jobs:
 
       - name: 셸 정적 검사 (shellcheck)
         run: shellcheck new-project.sh tools/*.sh tests/*.sh
+
+      # 🔒 워크플로 보안 정적분석. `actionlint` 은 정확성, 이건 보안 — 층이다.
+      # 🔴 **여기는 전부 막는다**(소비자용 `python-ci.yml` 은 medium 이상).
+      # 이 저장소의 워크플로는 **남의 저장소에서 돈다** — 폭발 반경이 가장 크다.
+      - name: 워크플로 보안 (zizmor · 전부)
+        # ⚠️ 이 잡은 액션을 안 쓴다 — 허용목록을 건드리지 않으려는 규율이다.
+        # `pipx` 는 러너에 이미 있고 액션이 아니므로 allowlist 와 무관하다.
+        run: pipx run zizmor==1.29.0 --no-progress .github/workflows/
 
       - name: 룰셋 불변식 — 벽이 벽인가
         run: ./tools/check-ruleset.sh ruleset.json
