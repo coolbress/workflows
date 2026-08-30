@@ -49,6 +49,19 @@ on:
         type: string
         default: "*.md *.lock *lock.json *lock.yaml *lock.yml LICENSE"
 
+      extra-python-versions:
+        description: |
+          `.python-version` **말고 더** 시험할 파이썬 판. 공백으로 나눈다 (예: "3.13 3.14").
+          🔴 **`requires-python` 이 선언한 범위를 실제로 재라는 것이다.** 라이브러리가
+          `>=3.12` 라고 써놓고 3.12 만 재면 **안 재본 것을 지원한다고 말하는 것**이다.
+
+          ⚠️ **매트릭스(`strategy.matrix`)를 안 쓴다.** 쓰면 검사 이름이
+          `ci / test (3.13)` 처럼 갈라지고, 그러면 **소비자마다 룰셋을 다시 고쳐야 한다**
+          (관리자 작업). 한 잡 안에서 돌면 이름이 `ci / test` 로 유지된다.
+        required: false
+        type: string
+        default: ""
+
 # 기본 토큰은 write-broad 다. 최소로 내린다 (같은 체크리스트: MUST).
 permissions:
   contents: read
@@ -123,6 +136,19 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - run: uv run pytest
+
+      # 🔴 선언한 범위를 실제로 잰다. 비어 있으면 이 스텝은 아무것도 안 한다.
+      # `uv` 가 판을 받아오므로 러너에 미리 깔려 있을 필요가 없다.
+      - name: 추가 파이썬 판에서도 도는가
+        if: inputs.extra-python-versions != ''
+        env:
+          VERSIONS: ${{ inputs.extra-python-versions }}
+        run: |
+          set -euo pipefail
+          for v in $VERSIONS; do
+            echo "── python $v"
+            uv run --isolated --python "$v" --with pytest pytest -q
+          done
 
   # 🔍 시크릿 탐지 — **푸시 보호와 겹치는 게 아니라 다른 것을 잡는다.**
   # 실측(standards: audit/SECRET-DETECTION-OVERLAP): 푸시 보호는 **공급자 형식만** 막고
