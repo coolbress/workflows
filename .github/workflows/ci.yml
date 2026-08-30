@@ -131,6 +131,11 @@ jobs:
       - name: 모든 시험이 실제로 배선됐나
         run: ./tests/all-tests-are-wired.sh
 
+      # 🔴 같은 병의 다른 얼굴 — 입력을 만들어놓고 **아무도 안 넘기면** 그 경로는 안 돈다.
+      # 실측: `extra-python-versions` 가 그랬다. 선언한 것과 도는 것은 다른 문장이다.
+      - name: 입력이 실제로 넘겨지나 (`if:` 로 막힌 것)
+        run: ./tests/inputs-are-exercised.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
