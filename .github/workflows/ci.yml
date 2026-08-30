@@ -86,6 +86,8 @@ jobs:
       # 보여주는 훅이 일을 막으면 그건 벽 흉내이고, 벽은 GitHub 에 있다.
       - name: 플러그인 훅 (fail-open · 길이 · 네트워크 없음)
         run: ./tests/plugin-hooks.sh
+      - name: 룰셋 갱신 — 이름 가드 (오지 않을 검사를 요구하면 머지 불가가 된다)
+        run: ./tests/upgrade-ruleset-guard.sh
 
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
