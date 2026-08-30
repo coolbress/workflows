@@ -102,6 +102,11 @@ jobs:
       - name: 룰셋 갱신 — 이름 가드 (오지 않을 검사를 요구하면 머지 불가가 된다)
         run: ./tests/upgrade-ruleset-guard.sh
 
+      # 🔴 규칙 종류를 더할 때 **다른 필드를 지우지 않는가.** 손으로 JSON 을 붙이면
+      # bypass_actors 나 enforcement 가 조용히 날아가고 그게 벽이 약해지는 방식이다.
+      - name: 룰셋 규칙 추가 — 더하기만 하는가
+        run: ./tests/add-ruleset-rule.sh
+
       # 🔴 pty 를 실제로 띄운다. 붙여넣은 다음 명령줄이 토큰으로 삼켜지면
       # 그 명령은 조용히 사라진다 — 실측으로 그랬다.
       - name: 관리자 토큰 프롬프트 (stdin 을 먹지 않는다)
