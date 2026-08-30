@@ -5,6 +5,11 @@
 #   예:     ./tools/with-admin-token.sh ./new-project.sh myapp
 #           ./tools/with-admin-token.sh ./tools/upgrade-ruleset.sh coolbress/x 'CodeQL:57789'
 #
+# 저장소 여럿에 같은 검사를 걸 땐 **한 번만 묻게** 한 줄로 묶는다 —
+# 세 줄을 붙여넣으면 토큰을 세 번 쳐야 하고, 그 사이에 줄이 삼켜질 수 있다:
+#   ./tools/with-admin-token.sh bash -c 'for r in a b c; do
+#      ./tools/upgrade-ruleset.sh "coolbress/$r" "ci / deps:15368"; done'
+#
 # 🔴 왜 이게 필요한가: 이전 안내는 `GH_TOKEN='<붙여넣기>' ./new-project.sh` 였다.
 # 그러면 **토큰이 `~/.zsh_history` 에 그대로 저장된다** — `histignorespace` 가 켜져 있어도
 # 앞에 공백을 안 붙이면 남는다. 즉 *"파일에도 안 남는다"* 는 주장이 사실이 아니었다.
@@ -16,8 +21,13 @@ set -euo pipefail
 
 [ $# -gt 0 ] || { echo "사용법: with-admin-token.sh <명령> [인자...]" >&2; exit 2; }
 
+# 🔴 **터미널에서 직접 읽는다 — stdin 이 아니다.**
+# 여러 줄을 한 번에 붙여넣으면 뒤따르는 **명령줄이 토큰으로 삼켜진다.**
+# 그러면 그 명령은 조용히 사라지고(실행 안 됨), 이 스크립트는 쓰레기를 토큰으로 받는다.
+# 실측(2026-08-30): 룰셋 갱신 세 줄을 한 번에 붙여넣었다 — 정확히 이 형태다.
+if [ -r /dev/tty ]; then src=/dev/tty; else src=/dev/stdin; fi
 printf '관리자 토큰 (입력은 화면에 안 보인다): ' >&2
-IFS= read -rs GH_TOKEN
+IFS= read -rs GH_TOKEN < "$src"
 printf '\n' >&2
 
 # 🔴 붙여넣기에 딸려온 공백을 떼어낸다. `IFS= read` 는 앞뒤 공백을 남기는데,
