@@ -162,7 +162,7 @@ jobs:
         continue-on-error: true
         uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
-          openai_api_key: ${{ secrets.openai_api_key }}
+          openai-api-key: ${{ secrets.openai_api_key }}
           codex-version: ${{ inputs.codex-version }}
           model: ${{ inputs.model }}
           effort: ${{ inputs.effort }}
@@ -176,7 +176,7 @@ jobs:
         continue-on-error: true
         uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
-          openai_api_key: ${{ secrets.openai_api_key }}
+          openai-api-key: ${{ secrets.openai_api_key }}
           codex-version: ${{ inputs.codex-version }}
           model: ${{ inputs.model }}
           effort: ${{ inputs.effort }}
