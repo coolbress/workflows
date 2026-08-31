@@ -53,7 +53,11 @@ on:
           🔴 **ChatGPT 구독과 다른 지갑이다** — 실측 2026-08-31: ChatGPT 계정으로 붙은
           로컬 codex 는 `gpt-5.x-codex` 를 **거부**한다(*"not supported when using Codex
           with a ChatGPT account"*). CI 는 API 키로 도므로 **종량 과금**이 따로 붙는다.
-        required: true
+
+          ⚠️ **`required: false` 다 — 일부러.** `true` 로 두면 시크릿이 없는 저장소에서
+          **워크플로 전체가 startup_failure** 가 되고, 그러면 `integrity` 같은 **다른 검사까지
+          통째로 사라진다**(검사가 없으면 빨갛지도 않다). 없을 때 죽는 것은 **이 잡 하나**여야 한다.
+        required: false
 
 jobs:
   review:
@@ -71,6 +75,18 @@ jobs:
           echo 'GitHub 은 pull_request 에서 포크에 시크릿을 주지 않는다 — 설계다.'
           echo "이 저장소는 소유자 브랜치 PR 만 쓰므로 이 상태는 정상이 아니다."
           exit 1
+
+      - name: 열쇠가 있는가 — 없으면 왜 빨간지 먼저 말한다
+        env:
+          KEY: ${{ secrets.openai_api_key }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY:-}" ]; then
+            echo '::error::openai_api_key 시크릿이 없다 — 제3자 리뷰를 돌릴 수 없다.'
+            echo "소유자가 넣는다: gh secret set OPENAI_API_KEY --repo <저장소>"
+            exit 1
+          fi
+          echo "열쇠 확인: 접두 ${KEY%%-*}- · 길이 ${#KEY}"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
