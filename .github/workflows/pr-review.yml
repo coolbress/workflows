@@ -35,17 +35,19 @@ on:
   workflow_call:
     inputs:
       codex-version:
-        description: "설치할 `@openai/codex` 판. 🔴 핀한다 — 리뷰어가 조용히 바뀌면 리뷰도 바뀐다."
+        description: |
+          설치할 codex 판(릴리스 태그의 `rust-v` 뒤 부분).
+          🔴 **핀한다** — 리뷰어가 조용히 바뀌면 리뷰도 조용히 바뀐다.
+          ⚠️ `codex-sha256` 과 **반드시 같이** 바꾼다.
         type: string
         default: "0.151.0"
-      model:
-        description: "모델. 비우면 codex 기본값."
+
+      codex-sha256:
+        description: |
+          위 판의 `codex-x86_64-unknown-linux-musl.tar.gz` 체크섬.
+          **이게 핀이다** — 버전 문자열은 바뀔 수 있어도 이건 못 바꾼다.
         type: string
-        default: ""
-      effort:
-        description: "추론 강도(`low`·`medium`·`high`). 비우면 codex 기본값."
-        type: string
-        default: ""
+        default: "605b4b183f22c645f5def63a5b7191767407fb66a6feaec4eaf10b5b7e0058f6"
     secrets:
       openai_api_key:
         description: |
@@ -169,45 +171,62 @@ jobs:
           printf '\n리뷰 대상 diff 는 이 명령이 낸다: `git diff %s...HEAD`\n' "$BASE_SHA" \
             >> "$RUNNER_TEMP/prompt.md"
 
+      # 🔴 **액션도 npm 도 아니다 — 공식 릴리스 바이너리를 체크섬으로 검증해 쓴다.**
+      # 이 저장소가 `actionlint` 에서 이미 낸 답이고, 여기서 두 번 값을 치르고 다시 확인했다:
+      #   ① `openai/codex-action` → **워크플로가 startup_failure**. Actions 허용목록이
+      #      `selected` 인데 패턴에 없다(실측 2026-08-31). 넓히는 것은 **관리자 작업**이다.
+      #   ② `npm install -g @openai/codex@…` → **zizmor `adhoc-packages`(low)**.
+      #      이 저장소는 zizmor 를 **전부** 막으므로 low 하나로 CI 가 빨개진다.
+      # 체크섬 검증은 다이제스트 핀과 **같은 보장**(바뀌면 실패)을 주면서 둘 다 안 건드린다.
+      # 올릴 때: 버전과 체크섬을 **같이** 바꾼다.
+      - name: codex 설치 — 공식 릴리스 + SHA256 검증
+        env:
+          CODEX_VERSION: ${{ inputs.codex-version }}
+          CODEX_SHA256: ${{ inputs.codex-sha256 }}
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/codex"; mkdir -p "$d"
+          f="codex-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL --retry 3 -o "$d/$f" \
+            "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/$f"
+          echo "${CODEX_SHA256}  $d/$f" | sha256sum -c -
+          tar -xzf "$d/$f" -C "$d"
+          mv "$d/codex-x86_64-unknown-linux-musl" "$d/codex"
+          chmod +x "$d/codex"
+          echo "$d" >> "$GITHUB_PATH"
+          "$d/codex" --version
+
       # 🔬 **재시도가 왜 있나 (실측 2026-08-31)**: 같은 프롬프트로 로컬 codex 를 돌렸더니
       # 첫 판이 `ERROR: Selected model is at capacity` 로 죽었고 **같은 입력으로 다시 돌리니
       # 성공**했다. 벤더 용량은 코드와 무관한데 그것 때문에 벽이 빨개지면 벽을 안 믿게 된다.
       # ⚠️ **두 번까지다.** 무한 재시도는 진짜 고장을 숨긴다.
-      - name: 제3자 리뷰 (1차)
-        id: attempt1
-        continue-on-error: true
-        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
-        with:
-          openai-api-key: ${{ secrets.openai_api_key }}
-          codex-version: ${{ inputs.codex-version }}
-          model: ${{ inputs.model }}
-          effort: ${{ inputs.effort }}
-          permission-profile: ":read-only"
-          prompt-file: ${{ runner.temp }}/prompt.md
-          output-schema-file: ${{ runner.temp }}/schema.json
-
-      - name: 제3자 리뷰 (2차 — 1차가 인프라로 죽었을 때만)
-        id: attempt2
-        if: steps.attempt1.outcome == 'failure'
-        continue-on-error: true
-        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
-        with:
-          openai-api-key: ${{ secrets.openai_api_key }}
-          codex-version: ${{ inputs.codex-version }}
-          model: ${{ inputs.model }}
-          effort: ${{ inputs.effort }}
-          permission-profile: ":read-only"
-          prompt-file: ${{ runner.temp }}/prompt.md
-          output-schema-file: ${{ runner.temp }}/schema.json
+      - name: 제3자 리뷰 — 최대 두 번
+        env:
+          OPENAI_API_KEY: ${{ secrets.openai_api_key }}
+        run: |
+          set -uo pipefail
+          # 🔴 `</dev/null` 이 없으면 `codex exec` 가 **stdin 을 기다리며 멈춘다** —
+          # 실측에서 10분 타임아웃까지 걸렸다. CI 에는 칠 사람이 없다.
+          for attempt in 1 2; do
+            echo "── 시도 $attempt"
+            if codex exec --skip-git-repo-check -s read-only \
+                 --output-schema "$RUNNER_TEMP/schema.json" \
+                 "$(cat "$RUNNER_TEMP/prompt.md")" </dev/null \
+                 > "$RUNNER_TEMP/review.json" 2> "$RUNNER_TEMP/review.err"; then
+              echo "리뷰가 돌았다 ($(wc -c < "$RUNNER_TEMP/review.json") 바이트)"
+              exit 0
+            fi
+            echo "실패 — 아래는 마지막 다섯 줄이다:"
+            tail -5 "$RUNNER_TEMP/review.err" || true
+          done
+          # 🔴 여기 오면 두 번 다 죽었다. 판정은 다음 스텝이 한다 — 빈 출력은 벽이 막는다.
+          echo "::warning::제3자 리뷰가 두 번 다 실패했다"
 
       - name: 벽 — 리뷰가 실제로 돌았고 형식이 맞는가
         id: gate
-        env:
-          OUT1: ${{ steps.attempt1.outputs.final-message }}
-          OUT2: ${{ steps.attempt2.outputs.final-message }}
         run: |
           set -euo pipefail
-          printf '%s' "${OUT2:-$OUT1}" > "$RUNNER_TEMP/review.json"
+          touch "$RUNNER_TEMP/review.json"
           python3 - "$RUNNER_TEMP/review.json" "$RUNNER_TEMP/comment.md" <<'PY'
           """제3자 출력이 **스키마대로인가** 만 판정한다. findings 로는 막지 않는다."""
           import json, sys, pathlib

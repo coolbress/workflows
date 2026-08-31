@@ -161,3 +161,15 @@ jobs:
   # 🔴 **자기 자신에게 먼저 건다.** 이 워크플로는 남의 저장소에서 도는데, 여기서 안 돌려보면
   # *"YAML 이 맞다"* 까지만 아는 것이다 — `extra-python-versions` 가 정확히 그래서 아무 데서도
   # 안 돌고 있었다(2026-08-30). **카나리는 남이 아니라 우리가 먼저 맞는 것이다.**
+  third-party:
+    if: github.event_name == 'pull_request'
+    # 🔴 **호출부가 권한을 준다.** 이 워크플로 맨 위는 `contents: read` 뿐이라
+    # 불린 워크플로가 요구하는 `pull-requests: write` 를 못 준다 —
+    # 그러면 실행이 아니라 **시작이 실패한다**(startup_failure).
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/pr-review.yml
+    secrets:
+      # `inherit` 를 안 쓴다 — 필요한 것 하나만 넘긴다(zizmor overprovisioned_secrets).
+      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
