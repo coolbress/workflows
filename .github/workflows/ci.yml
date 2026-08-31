@@ -140,6 +140,11 @@ jobs:
       - name: 아키타입 목록이 한 곳에서만 오나
         run: ./tests/archetype-single-source.sh
 
+      # 🔴 리뷰 벽의 판정은 `run:` 안의 파이썬 한 토막이다 — 안 돌려보면 첫 실행이 시험이 되고
+      # 그때는 이미 PR 이 빨갛다. **막을 것과 막으면 안 되는 것을 둘 다** 본다.
+      - name: 제3자 리뷰 벽의 계약
+        run: ./tests/pr-review-gate.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
@@ -151,3 +156,20 @@ jobs:
       # 안 넘기면 `extra-python-versions` 는 아무 데서도 안 돌고 그걸 아무도 모른다
       # (오늘 `security-setting.sh` 가 정확히 그렇게 배선이 빠진 채 초록이었다).
       extra-python-versions: "3.13"
+
+  # 🤝 **제3자가 본다** — `standards` R5-40 의 ⓒ 층. 검사 이름은 `third-party / review`.
+  # 🔴 **자기 자신에게 먼저 건다.** 이 워크플로는 남의 저장소에서 도는데, 여기서 안 돌려보면
+  # *"YAML 이 맞다"* 까지만 아는 것이다 — `extra-python-versions` 가 정확히 그래서 아무 데서도
+  # 안 돌고 있었다(2026-08-30). **카나리는 남이 아니라 우리가 먼저 맞는 것이다.**
+  third-party:
+    if: github.event_name == 'pull_request'
+    # 🔴 **호출부가 권한을 준다.** 이 워크플로 맨 위는 `contents: read` 뿐이라
+    # 불린 워크플로가 요구하는 `pull-requests: write` 를 못 준다 —
+    # 그러면 실행이 아니라 **시작이 실패한다**(startup_failure).
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/pr-review.yml
+    secrets:
+      # `inherit` 를 안 쓴다 — 필요한 것 하나만 넘긴다(zizmor overprovisioned_secrets).
+      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
