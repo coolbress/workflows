@@ -166,4 +166,4 @@ jobs:
     uses: ./.github/workflows/pr-review.yml
     secrets:
       # `inherit` 를 안 쓴다 — 필요한 것 하나만 넘긴다(zizmor overprovisioned_secrets).
-      openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+      openai_api_key: ${{ secrets.OPENAI_API_KEY }}

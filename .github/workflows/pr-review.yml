@@ -6,7 +6,7 @@ name: pr-review
 #     third-party:
 #       uses: coolbress/workflows/.github/workflows/pr-review.yml@<commit-sha>
 #       secrets:
-#         openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+#         openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 #
 # 검사 이름은 **`third-party / review`** 로 모든 저장소에서 같다 — 호출 잡 이름을
 # `third-party` 로 통일하기 때문이다. 이름이 갈리면 **소비자마다 룰셋을 다시 고쳐야** 한다
@@ -47,7 +47,7 @@ on:
         type: string
         default: ""
     secrets:
-      openai-api-key:
+      openai_api_key:
         description: |
           OpenAI **플랫폼 API 키**(`sk-...`).
           🔴 **ChatGPT 구독과 다른 지갑이다** — 실측 2026-08-31: ChatGPT 계정으로 붙은
@@ -162,7 +162,7 @@ jobs:
         continue-on-error: true
         uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
-          openai-api-key: ${{ secrets.openai-api-key }}
+          openai_api_key: ${{ secrets.openai_api_key }}
           codex-version: ${{ inputs.codex-version }}
           model: ${{ inputs.model }}
           effort: ${{ inputs.effort }}
@@ -176,7 +176,7 @@ jobs:
         continue-on-error: true
         uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
-          openai-api-key: ${{ secrets.openai-api-key }}
+          openai_api_key: ${{ secrets.openai_api_key }}
           codex-version: ${{ inputs.codex-version }}
           model: ${{ inputs.model }}
           effort: ${{ inputs.effort }}
