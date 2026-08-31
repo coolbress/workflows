@@ -9,8 +9,20 @@ disallowed-tools: Edit, Write, NotebookEdit
      아래 §되먹임이 *"고치면 그 수정이 다시 리뷰를 부르고, 그것이 또 수정을 부른다"* 라고
      적어놓고 **아무것도 그걸 막지 않았다.**
      `disallowed-tools` 는 **다음 메시지에 풀린다**(1차 문서) — 즉 리뷰와 수정 사이에
-     **사람 턴이 하나 강제로 들어간다.** 고치지 못하게 하는 게 아니라 **같은 턴에 못 고치게** 한다.
-     원칙 04(판단은 위임하지 않는다)가 구조가 되는 자리다. -->
+     **사람 턴이 하나 강제로 들어간다.** 원칙 04(판단은 위임하지 않는다)가 구조가 되는 자리다.
+
+     🔬 **실측으로 재봤다 (2026-08-31 프로브) — 내가 적은 것보다 세고, 동시에 약하다.**
+
+     세다: **서브에이전트까지 막는다.**
+       Write → "Write is disabled for this session, **in subagents as well as here**."
+       ToolSearch "select:Edit,Write,NotebookEdit" → "No matching deferred tools found"
+
+     🔴 약하다: **`Bash` 는 안 막힌다.** 그리고 auto 모드 세션은
+     *"파일 수정은 `sed`·heredoc 으로 하라"* 는 지시를 받는다 —
+     **그 구성에서 이건 벽이 아니라 과속방지턱이다.**
+
+     ⚠️ **그래도 `Bash` 를 빼지 않는다.** 이 커맨드의 본체가 `codex review` 실행이다.
+     빼면 리뷰 자체가 안 된다. **집행은 벽(GitHub)이 하고 여기는 규율이다** — 원칙 01. -->
 
 <!-- 🔴 **사용자 전용이다.** 이유가 둘이다.
      ① 외부 모델 호출은 **비용**이고, 되먹임 루프(수정 → 재리뷰 → 재수정)가 실사용에서 보고된 위험이다.
@@ -36,12 +48,24 @@ disallowed-tools: Edit, Write, NotebookEdit
 
 ## 1. `codex` — 권장
 
-```
-/codex:review                 diff 를 리뷰한다
-/codex:adversarial-review     구현 접근과 설계 선택에 시비를 건다
+🔴 **CLI 로 부른다. 슬래시 커맨드는 내가 못 부른다.**
+
+```bash
+codex review --base main                    # diff 리뷰 — 이게 기본이다
+codex review --base main "설계 선택에 시비를 걸어라"   # 설계가 흔들릴 만한 PR 에만
 ```
 
-두 번째는 **설계가 흔들릴 만한 PR** 에만. 첫 번째가 기본이다.
+⚠️ **왜 CLI 인가** — `/codex:review` 는 `disable-model-invocation: true` 다.
+**모델이 부르면 아무 일도 안 일어난다.** 이 커맨드 헤더가 그 막다른 길을 적어놨으면서
+§1 은 **슬래시 커맨드만 적어뒀었다** — 실측(2026-08-31 프로브)에서 에이전트가
+`codex --help` 를 스스로 뒤져 CLI 를 찾아내야 했다. **막다른 길을 알면 우회로를 같이 적는다.**
+
+⚠️ **사람이 대화형으로 쓸 땐** 슬래시 커맨드가 편하다: `/codex:review` · `/codex:adversarial-review`.
+**당신이 치는 것은 되고, 내가 부르는 것은 안 된다.**
+
+🔬 실측 잡음 하나: `codex review` 가 리뷰 전에 홈 디렉터리를 훑으며
+`find: … Operation not permitted` 를 **수백 줄** 뱉고, 결과를 **두 번** 출력한다.
+**기능엔 지장이 없다** — 놀라지 마라.
 
 ## 2. 그 밖의 외부 모델
 
