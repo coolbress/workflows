@@ -102,6 +102,30 @@ run "표식은 running 인데 리뷰 객체가 왔다" "$(cmt "$BOT" "$HEAD" run
 run "🔴 리뷰 객체가 **옛 커밋**이면 안 된다" '[]' 1 "$(rvw "$BOT" "$OLD")"
 run "🔴 남의 리뷰 객체는 안 쳐준다"        '[]' 1 "$(rvw "someone" "$HEAD")"
 
+echo "── 🔵 **리뷰 댓글 신호** — 🔴 GitHub 이 \`commit_id\` 를 다시 쓴다"
+# 🔬 실측(2026-09-01 · standards#224): PR 에 새 커밋이 붙으면 GitHub 이 **살아 있는 리뷰
+# 댓글의 `commit_id` 를 현재 head 로 옮긴다.** `original_commit_id` 만 안 움직인다.
+# 그래서 옛 리뷰의 댓글 하나로 **그 뒤 모든 푸시가 자동 초록**이 됐다 — 새 커밋 후 20초에
+# SUCCESS, 진짜 리뷰는 140초 뒤. **그 경로를 시험이 한 번도 안 태웠다**(rc.json 이 늘 []).
+rcm() {  # 작성자 · commit_id · original_commit_id
+  printf '[{"user":{"login":"%s"},"commit_id":"%s","original_commit_id":"%s","body":"P2 …"}]' "$1" "$2" "$3"
+}
+runrc() {  # 이름 · 리뷰댓글 JSON · 기대 종료코드
+  echo '[]' > "$tmp/i.json"; echo '[]' > "$tmp/r.json"
+  printf '%s' "$2" > "$tmp/rc.json"
+  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
+  got=$?
+  if [ "$got" -ne "$3" ]; then
+    echo "🔴 $1 — 기대 exit=$3 인데 $got" >&2; sed 's/^/     /' "$tmp/log" >&2; fails=$((fails + 1))
+  else
+    echo "  ✅ $1"
+  fi
+}
+runrc "이 커밋에 달린 리뷰 댓글은 통과"            "$(rcm "$BOT" "$HEAD" "$HEAD")" 0
+runrc "🔴 **옛 댓글이 head 로 옮겨온 것**은 안 된다" "$(rcm "$BOT" "$HEAD" "$OLD")"  1
+runrc "🔴 남의 리뷰 댓글은 안 쳐준다"              "$(rcm "someone" "$HEAD" "$HEAD")" 1
+runrc "🔴 original 이 없는 댓글도 안 쳐준다"        '[{"user":{"login":"chatgpt-codex-connector[bot]"},"commit_id":"'"$HEAD"'"}]' 1
+
 echo "── 🔵 **완료 댓글 신호** (실측: 지적 0건이면 리뷰 객체가 **안 생긴다**)"
 D1="Codex Review: Didn't find any major issues. Keep it up!"   # 실측 문구 그대로
 D2="Security review completed. No security issues were found in this pull request."
