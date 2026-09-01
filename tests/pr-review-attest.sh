@@ -24,7 +24,7 @@ lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
 start = next(i for i, ln in enumerate(lines) if ln.rstrip().endswith("<<'PY'"))
 end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == "PY")
 body = textwrap.dedent("\n".join(lines[start + 1:end]))
-assert "codex-security-review" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
+assert "codex-security-review" in body and "review-comment" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
 pathlib.Path(sys.argv[2]).write_text(body + "\n")
 PY
 [ -s "$tmp/attest.py" ] || { echo "🔴 판정 토막을 못 뽑았다" >&2; exit 1; }
@@ -50,9 +50,11 @@ PY
 }
 
 fails=0
-run() {  # 이름 · 댓글 JSON · 기대 종료코드
-  printf '%s' "$2" > "$tmp/c.json"
-  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/c.json" >"$tmp/log" 2>&1
+run() {  # 이름 · 이슈댓글 JSON · 기대 종료코드 · [리뷰 JSON]
+  printf '%s' "$2" > "$tmp/i.json"
+  printf '%s' "${4:-[]}" > "$tmp/r.json"
+  echo '[]' > "$tmp/rc.json"
+  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
   got=$?
   if [ "$got" -ne "$3" ]; then
     echo "🔴 $1 — 기대 exit=$3 인데 $got" >&2
@@ -80,13 +82,23 @@ echo "── 🔴 판정은 위임하지 않는다 (막으면 **안 되는** 것
 # 코덱스는 걸린 게 없으면 리뷰도 댓글도 안 남기고 👍 만 단다 — 그래도 **통과해야** 한다.
 run "지적 0건이어도 통과"        "$(cmt "$BOT" "$HEAD" completed)" 0
 
-echo "── 못 찾았을 때 **단서를 찍는가**"
-printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/c.json"
-python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/c.json" >"$tmp/log" 2>&1 || true
+echo "── 🔵 **리뷰 객체 신호** (실측: 지적 0건이어도 온다 · 표식보다 빠르다)"
+rvw() { printf '[{"user":{"login":"%s"},"commit_id":"%s","state":"COMMENTED"}]' "$1" "$2"; }
+run "표식은 running 인데 리뷰 객체가 왔다" "$(cmt "$BOT" "$HEAD" running)" 0 "$(rvw "$BOT" "$HEAD")"
+run "🔴 리뷰 객체가 **옛 커밋**이면 안 된다" '[]' 1 "$(rvw "$BOT" "$OLD")"
+run "🔴 남의 리뷰 객체는 안 쳐준다"        '[]' 1 "$(rvw "someone" "$HEAD")"
+
+echo "── 못 찾았을 때 **단서를 찍는가** (이름·커밋이 틀렸을 때 한 번에 고치라고)"
+printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/i.json"
+echo '[]' > "$tmp/r.json"; echo '[]' > "$tmp/rc.json"
+python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1 || true
 for want in "${OLD:0:8}" "codex"; do
-  grep -qF "$want" "$tmp/log" || { echo "🔴 로그에 '$want' 가 없다 — 고칠 단서가 없다" >&2; cat "$tmp/log" >&2; fails=$((fails+1)); }
+  if grep -qF "$want" "$tmp/log"; then
+    echo "  ✅ 로그에 있다: $want"
+  else
+    echo "🔴 로그에 '$want' 가 없다 — 고칠 단서가 없다" >&2; cat "$tmp/log" >&2; fails=$((fails+1))
+  fi
 done
-grep -qF "${OLD:0:8}" "$tmp/log" && echo "  ✅ 어긋난 커밋과 작성자를 찍는다"
 
 if [ "$fails" -ne 0 ]; then
   echo "🔴 $fails 건 실패" >&2
