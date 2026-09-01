@@ -285,10 +285,20 @@ jobs:
               for it in load(path):
                   seen.add(((it.get("user") or {}).get("login") or ""))
 
-          # ① 리뷰 객체 · 리뷰 댓글 — 커밋이 맞아야 한다
-          for kind, path in (("review", reviews_p), ("review-comment", rcomments_p)):
+          # ① 리뷰 객체 · 리뷰 댓글 — 커밋이 맞아야 한다.
+          #
+          # 🔴 **읽는 필드가 둘이다. 같이 쓰면 벽이 뚫린다** (실측 2026-09-01 · `standards#224`).
+          # **리뷰 댓글**(`pulls/N/comments`)의 `commit_id` 는 PR 에 새 커밋이 붙을 때마다
+          # **GitHub 이 현재 head 로 다시 쓴다** — 줄이 아직 살아 있으면 따라 옮겨간다.
+          # 그래서 옛 리뷰의 댓글 하나만 있으면 **그 뒤 모든 푸시가 자동으로 초록**이 됐다:
+          # 새 커밋을 밀고 **20초 만에** `third-party / review` 가 SUCCESS 였고,
+          # 진짜 리뷰는 **140초 뒤에** 왔다. 그 사이 머지가 가능했다.
+          # `original_commit_id` 는 **댓글이 처음 달린 커밋**이라 안 움직인다 — 그걸 본다.
+          # **리뷰 객체**(`pulls/N/reviews`)에는 그 필드가 없고 `commit_id` 가 안 움직인다.
+          for kind, path, field in (("review", reviews_p, "commit_id"),
+                                    ("review-comment", rcomments_p, "original_commit_id")):
               for it in load(path):
-                  if ours(it) and it.get("commit_id") == head:
+                  if ours(it) and it.get(field) == head:
                       print(f"✅ 제3자가 이 커밋을 봤다 — {kind} ({it.get('state') or 'comment'})")
                       sys.exit(0)
 
