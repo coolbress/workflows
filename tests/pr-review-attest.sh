@@ -37,6 +37,7 @@ BOT='chatgpt-codex-connector[bot]'
 # 완료 댓글 하나를 만든다. 🔵 **커밋은 댓글이 스스로 적는다** — 시각으로 안 묶는다.
 # 🔬 본문은 실측 그대로다(`standards#215`): `**Reviewed commit:** \`db8c8772fd\``
 done_cmt() {  # 작성자 · (안 씀) · 본문 · [적힌 커밋]
+  # shellcheck disable=SC2016  # 작은따옴표가 맞다 — 파이썬 코드지 셸 확장이 아니다
   python3 -c 'import json,sys
 who, _when, text = sys.argv[1:4]
 sha = sys.argv[4] if len(sys.argv) > 4 else ""
