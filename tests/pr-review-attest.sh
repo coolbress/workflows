@@ -24,7 +24,7 @@ lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
 start = next(i for i, ln in enumerate(lines) if ln.rstrip().endswith("<<'PY'"))
 end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == "PY")
 body = textwrap.dedent("\n".join(lines[start + 1:end]))
-assert "codex-security-review" in body and "review-comment" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
+assert "codex-security-review" in body and "DONE" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
 pathlib.Path(sys.argv[2]).write_text(body + "\n")
 PY
 [ -s "$tmp/attest.py" ] || { echo "🔴 판정 토막을 못 뽑았다" >&2; exit 1; }
@@ -32,6 +32,23 @@ PY
 HEAD=71a704cdca35f00de6e110a3d77a165d895d882a
 OLD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 BOT='chatgpt-codex-connector[bot]'
+
+# 🔬 지적 0건일 때 오는 **완료 댓글** — 실측 문구 그대로다(`standards#214`).
+# 요약 댓글(표식 · updated_at) + 완료 댓글을 한 배열로 만든다.
+# 🔴 완료 댓글은 **요약 댓글에 묶인다** — 커밋 시각이 아니다(제3자가 P1 로 잡은 자리).
+done_cmt() {  # 작성자 · 완료댓글 시각 · 본문 · [요약 sha] · [요약 updated_at]
+  python3 -c 'import json,sys
+who, when, text = sys.argv[1:4]
+sha, upd = (sys.argv[4], sys.argv[5]) if len(sys.argv) > 5 else ("", "")
+out = []
+if sha:
+    mark = "<!-- codex-security-review:v1 " + json.dumps(
+        {"headSha": sha, "status": "running", "mergeGateEnabled": False}) + " -->"
+    out.append({"user": {"login": "chatgpt-codex-connector[bot]"},
+                "created_at": upd, "updated_at": upd, "body": mark})
+out.append({"user": {"login": who}, "created_at": when, "body": text})
+print(json.dumps(out, ensure_ascii=False))' "$1" "$2" "$3" "${4:-}" "${5:-}"
+}
 
 # 이슈 댓글 하나를 만든다: 작성자 · 표식의 sha · 표식의 status
 cmt() {
@@ -54,7 +71,8 @@ run() {  # 이름 · 이슈댓글 JSON · 기대 종료코드 · [리뷰 JSON]
   printf '%s' "$2" > "$tmp/i.json"
   printf '%s' "${4:-[]}" > "$tmp/r.json"
   echo '[]' > "$tmp/rc.json"
-  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
+  python3 "$tmp/attest.py" "$HEAD" "$BOT" \
+    "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
   got=$?
   if [ "$got" -ne "$3" ]; then
     echo "🔴 $1 — 기대 exit=$3 인데 $got" >&2
@@ -87,6 +105,18 @@ rvw() { printf '[{"user":{"login":"%s"},"commit_id":"%s","state":"COMMENTED"}]' 
 run "표식은 running 인데 리뷰 객체가 왔다" "$(cmt "$BOT" "$HEAD" running)" 0 "$(rvw "$BOT" "$HEAD")"
 run "🔴 리뷰 객체가 **옛 커밋**이면 안 된다" '[]' 1 "$(rvw "$BOT" "$OLD")"
 run "🔴 남의 리뷰 객체는 안 쳐준다"        '[]' 1 "$(rvw "someone" "$HEAD")"
+
+echo "── 🔵 **완료 댓글 신호** (실측: 지적 0건이면 리뷰 객체가 **안 생긴다**)"
+D1="Codex Review: Didn't find any major issues. Keep it up!"   # 실측 문구 그대로
+D2="Security review completed. No security issues were found in this pull request."
+run "완료 댓글이 요약 갱신 뒤에 왔다"      "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 0
+run "보안 검토 완료 댓글도 쳐준다"         "$(done_cmt "$BOT" 2026-09-01T05:15:52Z "$D2" "$HEAD" 2026-09-01T05:12:07Z)" 0
+run "🔴 요약 갱신 **이전** 완료 댓글은 안 쳐준다" "$(done_cmt "$BOT" 2026-09-01T05:00:00Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 1
+run "🔴 이 head 의 요약이 없으면 안 쳐준다"    "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$OLD" 2026-09-01T05:12:07Z)" 1
+run "🔴 남이 같은 문구를 써도 안 쳐준다"       "$(done_cmt someone 2026-09-01T05:13:51Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 1
+# 🔬 제3자가 P1 로 잡은 바로 그 시나리오: head 가 **더 오래된 커밋**으로 옮겨간 경우.
+# 옛 head 의 완료 댓글이 남아 있어도 **이 head 의 요약이 없으므로** 통과하면 안 된다.
+run "🔴 옛 head 로 옮겨가도 통과하지 않는다"   "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$OLD" 2026-09-01T05:12:07Z)" 1
 
 echo "── 못 찾았을 때 **단서를 찍는가** (이름·커밋이 틀렸을 때 한 번에 고치라고)"
 printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/i.json"
