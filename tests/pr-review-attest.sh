@@ -24,7 +24,7 @@ lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
 start = next(i for i, ln in enumerate(lines) if ln.rstrip().endswith("<<'PY'"))
 end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == "PY")
 body = textwrap.dedent("\n".join(lines[start + 1:end]))
-assert "codex-security-review" in body and "review-comment" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
+assert "codex-security-review" in body and "DONE" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
 pathlib.Path(sys.argv[2]).write_text(body + "\n")
 PY
 [ -s "$tmp/attest.py" ] || { echo "🔴 판정 토막을 못 뽑았다" >&2; exit 1; }
@@ -32,6 +32,12 @@ PY
 HEAD=71a704cdca35f00de6e110a3d77a165d895d882a
 OLD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 BOT='chatgpt-codex-connector[bot]'
+HEAD_TIME='2026-09-01T05:11:00Z'
+
+# 🔬 지적 0건일 때 오는 **완료 댓글** — 실측 문구 그대로다(`standards#214`).
+done_cmt() {
+  python3 -c 'import json,sys; print(json.dumps([{"user":{"login":sys.argv[1]},"created_at":sys.argv[2],"body":sys.argv[3]}], ensure_ascii=False))' "$1" "$2" "$3"
+}
 
 # 이슈 댓글 하나를 만든다: 작성자 · 표식의 sha · 표식의 status
 cmt() {
@@ -54,7 +60,8 @@ run() {  # 이름 · 이슈댓글 JSON · 기대 종료코드 · [리뷰 JSON]
   printf '%s' "$2" > "$tmp/i.json"
   printf '%s' "${4:-[]}" > "$tmp/r.json"
   echo '[]' > "$tmp/rc.json"
-  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
+  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$HEAD_TIME" \
+    "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1
   got=$?
   if [ "$got" -ne "$3" ]; then
     echo "🔴 $1 — 기대 exit=$3 인데 $got" >&2
@@ -88,10 +95,18 @@ run "표식은 running 인데 리뷰 객체가 왔다" "$(cmt "$BOT" "$HEAD" run
 run "🔴 리뷰 객체가 **옛 커밋**이면 안 된다" '[]' 1 "$(rvw "$BOT" "$OLD")"
 run "🔴 남의 리뷰 객체는 안 쳐준다"        '[]' 1 "$(rvw "someone" "$HEAD")"
 
+echo "── 🔵 **완료 댓글 신호** (실측: 지적 0건이면 리뷰 객체가 **안 생긴다**)"
+D1="Codex Review: Didn't find any major issues. Keep it up!"   # 실측 문구 그대로
+D2="Security review completed. No security issues were found in this pull request."
+run "완료 댓글이 head 뒤에 왔다"          "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1")" 0
+run "보안 검토 완료 댓글도 쳐준다"         "$(done_cmt "$BOT" 2026-09-01T05:15:52Z "$D2")" 0
+run "🔴 head **이전** 완료 댓글은 안 쳐준다" "$(done_cmt "$BOT" 2026-09-01T04:00:00Z "$D1")" 1
+run "🔴 남이 같은 문구를 써도 안 쳐준다"     "$(done_cmt someone 2026-09-01T05:13:51Z "$D1")" 1
+
 echo "── 못 찾았을 때 **단서를 찍는가** (이름·커밋이 틀렸을 때 한 번에 고치라고)"
 printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/i.json"
 echo '[]' > "$tmp/r.json"; echo '[]' > "$tmp/rc.json"
-python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1 || true
+python3 "$tmp/attest.py" "$HEAD" "$BOT" "$HEAD_TIME" "$tmp/r.json" "$tmp/rc.json" "$tmp/i.json" >"$tmp/log" 2>&1 || true
 for want in "${OLD:0:8}" "codex"; do
   if grep -qF "$want" "$tmp/log"; then
     echo "  ✅ 로그에 있다: $want"
