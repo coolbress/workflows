@@ -24,7 +24,7 @@ lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
 start = next(i for i, ln in enumerate(lines) if ln.rstrip().endswith("<<'PY'"))
 end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == "PY")
 body = textwrap.dedent("\n".join(lines[start + 1:end]))
-assert "codex-security-review" in body and "DONE" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
+assert "codex-security-review" in body and "REVIEWED" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
 pathlib.Path(sys.argv[2]).write_text(body + "\n")
 PY
 [ -s "$tmp/attest.py" ] || { echo "🔴 판정 토막을 못 뽑았다" >&2; exit 1; }
@@ -34,20 +34,16 @@ OLD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 BOT='chatgpt-codex-connector[bot]'
 
 # 🔬 지적 0건일 때 오는 **완료 댓글** — 실측 문구 그대로다(`standards#214`).
-# 요약 댓글(표식 · updated_at) + 완료 댓글을 한 배열로 만든다.
-# 🔴 완료 댓글은 **요약 댓글에 묶인다** — 커밋 시각이 아니다(제3자가 P1 로 잡은 자리).
-done_cmt() {  # 작성자 · 완료댓글 시각 · 본문 · [요약 sha] · [요약 updated_at]
+# 완료 댓글 하나를 만든다. 🔵 **커밋은 댓글이 스스로 적는다** — 시각으로 안 묶는다.
+# 🔬 본문은 실측 그대로다(`standards#215`): `**Reviewed commit:** \`db8c8772fd\``
+done_cmt() {  # 작성자 · (안 씀) · 본문 · [적힌 커밋]
+  # shellcheck disable=SC2016  # 작은따옴표가 맞다 — 파이썬 코드지 셸 확장이 아니다
   python3 -c 'import json,sys
-who, when, text = sys.argv[1:4]
-sha, upd = (sys.argv[4], sys.argv[5]) if len(sys.argv) > 5 else ("", "")
-out = []
-if sha:
-    mark = "<!-- codex-security-review:v1 " + json.dumps(
-        {"headSha": sha, "status": "running", "mergeGateEnabled": False}) + " -->"
-    out.append({"user": {"login": "chatgpt-codex-connector[bot]"},
-                "created_at": upd, "updated_at": upd, "body": mark})
-out.append({"user": {"login": who}, "created_at": when, "body": text})
-print(json.dumps(out, ensure_ascii=False))' "$1" "$2" "$3" "${4:-}" "${5:-}"
+who, _when, text = sys.argv[1:4]
+sha = sys.argv[4] if len(sys.argv) > 4 else ""
+body = text + ("\n\n**Reviewed commit:** `" + sha + "`" if sha else "")
+print(json.dumps([{"user": {"login": who}, "created_at": "2026-09-01T06:08:51Z",
+                   "body": body}], ensure_ascii=False))' "$1" "$2" "$3" "${4:-}"
 }
 
 # 이슈 댓글 하나를 만든다: 작성자 · 표식의 sha · 표식의 status
@@ -109,14 +105,13 @@ run "🔴 남의 리뷰 객체는 안 쳐준다"        '[]' 1 "$(rvw "someone" 
 echo "── 🔵 **완료 댓글 신호** (실측: 지적 0건이면 리뷰 객체가 **안 생긴다**)"
 D1="Codex Review: Didn't find any major issues. Keep it up!"   # 실측 문구 그대로
 D2="Security review completed. No security issues were found in this pull request."
-run "완료 댓글이 요약 갱신 뒤에 왔다"      "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 0
-run "보안 검토 완료 댓글도 쳐준다"         "$(done_cmt "$BOT" 2026-09-01T05:15:52Z "$D2" "$HEAD" 2026-09-01T05:12:07Z)" 0
-run "🔴 요약 갱신 **이전** 완료 댓글은 안 쳐준다" "$(done_cmt "$BOT" 2026-09-01T05:00:00Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 1
-run "🔴 이 head 의 요약이 없으면 안 쳐준다"    "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$OLD" 2026-09-01T05:12:07Z)" 1
-run "🔴 남이 같은 문구를 써도 안 쳐준다"       "$(done_cmt someone 2026-09-01T05:13:51Z "$D1" "$HEAD" 2026-09-01T05:12:07Z)" 1
-# 🔬 제3자가 P1 로 잡은 바로 그 시나리오: head 가 **더 오래된 커밋**으로 옮겨간 경우.
-# 옛 head 의 완료 댓글이 남아 있어도 **이 head 의 요약이 없으므로** 통과하면 안 된다.
-run "🔴 옛 head 로 옮겨가도 통과하지 않는다"   "$(done_cmt "$BOT" 2026-09-01T05:13:51Z "$D1" "$OLD" 2026-09-01T05:12:07Z)" 1
+run "완료 댓글이 이 커밋을 적었다"          "$(done_cmt "$BOT" x "$D1" "${HEAD:0:10}")" 0
+run "보안 검토 완료 댓글도 쳐준다"          "$(done_cmt "$BOT" x "$D2" "$HEAD")" 0
+run "🔴 **다른 커밋**을 적었으면 안 쳐준다"   "$(done_cmt "$BOT" x "$D1" "${OLD:0:10}")" 1
+run "🔴 커밋을 **안 적은** 완료 댓글은 안 쳐준다" "$(done_cmt "$BOT" x "$D1")" 1
+run "🔴 남이 같은 문구를 써도 안 쳐준다"      "$(done_cmt someone x "$D1" "$HEAD")" 1
+# 🔬 제3자가 P1 로 잡은 시나리오: head 가 **더 오래된 커밋**으로 옮겨간 경우.
+# 커밋으로 묶으므로 **시각 heuristic 이 아예 없다** — 옛 커밋의 완료 댓글은 그냥 안 맞는다.
 
 echo "── 못 찾았을 때 **단서를 찍는가** (이름·커밋이 틀렸을 때 한 번에 고치라고)"
 printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/i.json"
