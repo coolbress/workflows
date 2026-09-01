@@ -145,6 +145,10 @@ jobs:
       - name: 제3자 리뷰 벽의 계약
         run: ./tests/pr-review-attest.sh
 
+      # 🔴 리뷰어의 지시가 리뷰당하는 PR 안에서 바뀌는 것을 막는가 — 제3자가 물어서 생긴 검사다.
+      - name: 리뷰어 지시의 핀
+        run: ./tests/pr-review-policy-pin.sh
+
   # 🔴 canary — 재사용 워크플로를 **실제로 호출한다.**
   # actionlint 가 통과한 것과 워크플로가 도는 것은 다른 문장이다.
   # 소비자(project-template)가 깨지기 전에 여기서 깨진다.
