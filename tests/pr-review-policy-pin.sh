@@ -36,7 +36,6 @@ printf '# 제목\n\n## Code Review Rules\n\n원래 규칙\n\n## 다른 절\n\n�
 echo "코드" > app.py
 git add -A && git commit -q -m base
 BASE="$(git rev-parse HEAD)"
-
 fails=0
 try() {  # 이름 · 기대 종료코드
   ( cd "$repo" && BASE_SHA="$BASE" HEAD_SHA="$(git rev-parse HEAD)" \
@@ -50,6 +49,26 @@ try() {  # 이름 · 기대 종료코드
   fi
   git reset -q --hard "$BASE"
 }
+
+echo "── 🔬 머지·종료된 PR 에서는 아무것도 안 한다 (실측 사고: git 128 로 죽었다)"
+for env_pair in "MERGED=true" "PR_STATE=closed"; do
+  if ( cd "$repo" && env "$env_pair" BASE_SHA=deadbeef HEAD_SHA=deadbeef \
+         POLICY_FILE=AGENTS.md POLICY_HEADING='## Code Review Rules' \
+         bash "$tmp/step.sh" ) >"$tmp/log" 2>&1; then
+    echo "  ✅ $env_pair — 없는 커밋이어도 죽지 않는다"
+  else
+    echo "🔴 $env_pair 인데 실패했다" >&2; cat "$tmp/log" >&2; fails=$((fails+1))
+  fi
+done
+
+echo "── 🔴 열린 PR 인데 커밋을 못 찾으면 **조용히 통과하지 않는다**"
+if ( cd "$repo" && BASE_SHA=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef HEAD_SHA="$BASE" \
+       POLICY_FILE=AGENTS.md POLICY_HEADING='## Code Review Rules' \
+       bash "$tmp/step.sh" ) >"$tmp/log" 2>&1; then
+  echo "🔴 없는 커밋인데 통과시켰다 (fail-open)" >&2; cat "$tmp/log" >&2; fails=$((fails+1))
+else
+  echo "  ✅ 못 찾으면 멈추고 말한다"
+fi
 
 echo "── 통과해야 한다"
 echo "코드 고침" > app.py && git commit -qam "코드만"
