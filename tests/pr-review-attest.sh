@@ -4,9 +4,12 @@
 # 판정은 `pr-review.yml` 의 `run:` 안에 박힌 파이썬 한 토막이다. 워크플로 안에만 있으면
 # **아무도 안 돌려본다** — 첫 실행이 곧 시험이 되고, 그때는 이미 PR 이 빨갛다.
 #
-# 🔴 **이 벽의 계약은 좁다.** 보증하는 것은 *"제3자가 **이 커밋** 을 봤다"* 뿐이고
-# **리뷰의 판정(approve/changes)으로는 막지 않는다** — MSR '26 이 리뷰 에이전트 13종 중
-# **12종의 signal ratio 가 60% 미만**이라 하므로 그걸로 막으면 **소음으로 막는 것**이다.
+# 🔬 **아래 픽스처는 지어낸 게 아니라 실측한 것**이다(2026-09-01 · `standards#211`).
+# 첫 판은 `pulls/*/reviews` 를 뒤졌는데 **거기엔 아무것도 안 왔다** — 코덱스는 이슈 댓글
+# 하나에 표식을 남긴다. **모양을 보고 나서 고친 자리**라 실물을 그대로 시험에 넣는다.
+#
+# 🔴 **이 벽의 계약은 좁다**: *"제3자가 **이 커밋** 에서 리뷰를 **끝냈다**"* 뿐이고
+# **리뷰의 판정으로는 막지 않는다**(MSR '26 — 에이전트 13종 중 12종이 signal ratio 60% 미만).
 # **두 방향을 다 시험한다** — 통과만 보는 시험은 증명이 약하다.
 set -uo pipefail
 
@@ -21,23 +24,38 @@ lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
 start = next(i for i, ln in enumerate(lines) if ln.rstrip().endswith("<<'PY'"))
 end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == "PY")
 body = textwrap.dedent("\n".join(lines[start + 1:end]))
-assert "commit_id" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
+assert "codex-security-review" in body, "판정 토막을 못 찾았다 — 워크플로 모양이 바뀌었다"
 pathlib.Path(sys.argv[2]).write_text(body + "\n")
 PY
 [ -s "$tmp/attest.py" ] || { echo "🔴 판정 토막을 못 뽑았다" >&2; exit 1; }
 
-HEAD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-OLD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+HEAD=71a704cdca35f00de6e110a3d77a165d895d882a
+OLD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 BOT='chatgpt-codex-connector[bot]'
 
+# 이슈 댓글 하나를 만든다: 작성자 · 표식의 sha · 표식의 status
+cmt() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import json, sys
+who, sha, status = sys.argv[1:4]
+mark = ""
+if sha:
+    mark = ('<!-- codex-security-review:v1 ' + json.dumps({
+        "blockingSeverityThreshold": "P0", "headSha": sha, "mergeGateEnabled": False,
+        "pullRequestNumber": 211, "repository": "coolbress/standards", "status": status,
+    }) + ' -->')
+body = "<!-- codex-pull-request-review-summary -->\n" + mark + "\n## Codex Review Summary\n"
+print(json.dumps([{"user": {"login": who}, "body": body}], ensure_ascii=False))
+PY
+}
+
 fails=0
-run() {  # 이름 · reviews JSON · comments JSON · 기대 종료코드
-  printf '%s' "$2" > "$tmp/r.json"
-  printf '%s' "$3" > "$tmp/c.json"
-  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/c.json" >"$tmp/log" 2>&1
+run() {  # 이름 · 댓글 JSON · 기대 종료코드
+  printf '%s' "$2" > "$tmp/c.json"
+  python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/c.json" >"$tmp/log" 2>&1
   got=$?
-  if [ "$got" -ne "$4" ]; then
-    echo "🔴 $1 — 기대 exit=$4 인데 $got" >&2
+  if [ "$got" -ne "$3" ]; then
+    echo "🔴 $1 — 기대 exit=$3 인데 $got" >&2
     sed 's/^/     /' "$tmp/log" >&2
     fails=$((fails + 1))
   else
@@ -45,37 +63,33 @@ run() {  # 이름 · reviews JSON · comments JSON · 기대 종료코드
   fi
 }
 
-rv() { printf '[{"user":{"login":"%s"},"commit_id":"%s","state":"%s","body":"%s"}]' "$1" "$2" "$3" "${4:-말}"; }
-
-echo "── 🔴 막아야 한다 (제3자가 이 커밋을 안 봤다)"
-run "아무 리뷰도 없다"              '[]'                        '[]' 1
-run "사람 리뷰만 있다"              "$(rv me "$HEAD" APPROVED)" '[]' 1
-run "🔴 인정된 봇인데 **옛 커밋**"   "$(rv "$BOT" "$OLD" COMMENTED)" '[]' 1
-run "다른 봇이 이 커밋을 봤다"       "$(rv 'copilot-pull-request-reviewer[bot]' "$HEAD" COMMENTED)" '[]' 1
-run "JSON 이 깨졌다"                'not json'                  '[]' 1
+echo "── 🔴 막아야 한다"
+run "댓글이 아예 없다"          '[]'                              1
+run "표식 없는 사람 댓글만"      '[{"user":{"login":"me"},"body":"고쳤습니다"}]' 1
+run "🔴 **보는 중**(running)"    "$(cmt "$BOT" "$HEAD" running)"   1
+run "🔴 **옛 커밋**의 completed" "$(cmt "$BOT" "$OLD" completed)"  1
+run "남의 봇이 같은 표식을 남김"  "$(cmt 'someone-else[bot]' "$HEAD" completed)" 1
+run "표식 JSON 이 깨졌다"        '[{"user":{"login":"chatgpt-codex-connector[bot]"},"body":"<!-- codex-security-review:v1 {깨짐} -->"}]' 1
+run "댓글 배열이 아니다"          '{"message":"Not Found"}'         1
 
 echo "── ✅ 통과해야 한다"
-run "봇 리뷰가 이 커밋에 있다"       "$(rv "$BOT" "$HEAD" COMMENTED)" '[]' 0
-run "리뷰 코멘트로만 왔다"           '[]' "$(rv "$BOT" "$HEAD" '')"    0
-run "로그인 대소문자가 다르다"       "$(rv 'ChatGPT-Codex-Connector[bot]' "$HEAD" COMMENTED)" '[]' 0
+run "이 커밋의 completed"        "$(cmt "$BOT" "$HEAD" completed)" 0
+run "로그인 대소문자가 다르다"    "$(cmt 'ChatGPT-Codex-Connector[bot]' "$HEAD" completed)" 0
 
 echo "── 🔴 판정은 위임하지 않는다 (막으면 **안 되는** 것)"
-run "CHANGES_REQUESTED 여도 통과"    "$(rv "$BOT" "$HEAD" CHANGES_REQUESTED)" '[]' 0
-run "APPROVED 여도 통과"             "$(rv "$BOT" "$HEAD" APPROVED)"          '[]' 0
+# 코덱스는 걸린 게 없으면 리뷰도 댓글도 안 남기고 👍 만 단다 — 그래도 **통과해야** 한다.
+run "지적 0건이어도 통과"        "$(cmt "$BOT" "$HEAD" completed)" 0
 
-echo "── 못 찾았을 때 **본 작성자를 찍는가** (이름이 틀렸을 때 한 번에 고치라고)"
-printf '%s' "$(rv 'some-other-bot[bot]' "$HEAD" COMMENTED)" > "$tmp/r.json"
-echo '[]' > "$tmp/c.json"
-python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/r.json" "$tmp/c.json" >"$tmp/log" 2>&1 || true
-if grep -q "some-other-bot" "$tmp/log"; then
-  echo "  ✅ 본 작성자를 찍는다"
-else
-  echo "🔴 작성자를 안 찍는다 — 이름이 틀렸을 때 고칠 단서가 없다" >&2
-  cat "$tmp/log" >&2; fails=$((fails + 1))
-fi
+echo "── 못 찾았을 때 **단서를 찍는가**"
+printf '%s' "$(cmt "$BOT" "$OLD" completed)" > "$tmp/c.json"
+python3 "$tmp/attest.py" "$HEAD" "$BOT" "$tmp/c.json" >"$tmp/log" 2>&1 || true
+for want in "${OLD:0:8}" "codex"; do
+  grep -qF "$want" "$tmp/log" || { echo "🔴 로그에 '$want' 가 없다 — 고칠 단서가 없다" >&2; cat "$tmp/log" >&2; fails=$((fails+1)); }
+done
+grep -qF "${OLD:0:8}" "$tmp/log" && echo "  ✅ 어긋난 커밋과 작성자를 찍는다"
 
 if [ "$fails" -ne 0 ]; then
   echo "🔴 $fails 건 실패" >&2
   exit 1
 fi
-echo "✅ 이 커밋을 봤는지만 막고, 리뷰의 판정으로는 안 막는다"
+echo "✅ 이 커밋에서 끝났는지만 막고, 리뷰의 판정으로는 안 막는다"
