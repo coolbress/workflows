@@ -1,8 +1,8 @@
 {
   "name": "coolbress-standards",
   "displayName": "coolbress standards",
-  "description": "이 저장소들의 진입로 — /kickoff · new-project · 정본이 어디 있는지. 훅 없음.",
-  "version": "0.9.0",
+  "description": "이 저장소들의 진입로 — playbook(어느 단계에서 무엇을 치나) · new-project · floor-check. 훅 없음.",
+  "version": "0.10.0",
   "author": {
     "name": "coolbress"
   },

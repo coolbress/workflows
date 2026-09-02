@@ -17,7 +17,7 @@ cat <<'TXT'
 
 - **왜** 이 규칙이 있나 → `coolbress/standards` (`direction/` · `corpus/` · `audit/`)
 - **벽과 생성기** → `coolbress/workflows` · **새 프로젝트가 받는 것** → `coolbress/project-template`
-- 자세한 것은 `where-is-the-truth` 스킬
+- 어느 단계에서 무엇을 치나 → `playbook` 스킬 (`/playbook`)
 
 **바깥을 열기 전에 발밑을 본다** — 가변 상태의 정본은 파일이 아니라 `gh issue list` 다.
 

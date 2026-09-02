@@ -16,6 +16,14 @@ disable-model-invocation: true
 
 ## 돌리는 법
 
+스크립트는 `coolbress/workflows` 에 산다. 없으면 먼저 받는다:
+
+```bash
+[ -d ~/workflows ] || gh repo clone coolbress/workflows ~/workflows   # 한 번만
+```
+<!-- ponytail: 플러그인이 스크립트를 안 싣는다 — new-project.sh 는 ruleset.json · tools/ 와 한 묶음이라
+     옮기면 넷이 같이 가야 한다. 설치자가 clone 한 줄이면 되므로 그걸로 둔다. 외부 설치자가 여기서 걸리면 그때 싣는다. -->
+
 ```bash
 cd ~   # 🔴 저장소 밖에서. 스크립트가 저장소 안이면 멈춘다
 ~/workflows/tools/with-admin-token.sh ~/workflows/new-project.sh <이름> [--license=<spdx>]
@@ -35,7 +43,8 @@ cd ~   # 🔴 저장소 밖에서. 스크립트가 저장소 안이면 멈춘다
 
 ## 만들어진 뒤
 
-1. **`/kickoff`** 으로 기획을 이슈로 옮긴다 — 인터뷰 답을 **이슈 본문에 전부** 남긴다
+1. 그 저장소에서 **`/grill-with-docs` + 아이디어 한 줄** — 인터뷰가 `CONTEXT.md` 와 이슈를 남긴다.
+   다음 단계는 `playbook` 스킬이 안내한다(`/to-spec` → `/to-tickets` → `/implement`)
 2. 첫 PR 은 **작게**. 첫 조각은 walking skeleton — end-to-end 한 줄기
 3. 🔴 **새 저장소를 토큰 목록에 추가해야 한다** — 안 하면 저장소는 완벽한데 **라벨 하나 못 만든다**(403).
    스크립트가 끝에 알려준다

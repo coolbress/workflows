@@ -229,7 +229,7 @@ copier 는 인스턴스에 **`.copier-answers.yml`** 을 남겨 *어느 판에�
 라이선스는 **GitHub 공식 라이선스 API 의 본문**을 그대로 쓴다(`/licenses/<spdx>`).
 교체는 **룰셋을 걸기 전에** 한다 — 건 뒤에는 `main` 직접 푸시가 막혀 PR 없이 못 바꾼다.
 
-## 플러그인 — `/kickoff` 과 `/new-project`
+## 플러그인 — `/playbook` 과 `/new-project`
 
 **이 저장소가 마켓플레이스다.** 커맨드와 스킬은 플러그인으로 배포한다:
 
@@ -238,16 +238,20 @@ claude plugin marketplace add coolbress/workflows
 claude plugin install coolbress-standards@coolbress
 ```
 
-담는 것: `/kickoff`(아이디어 → 과제) · `/new-project`(벽이 선 저장소) ·
-`/floor-check`(기존 저장소 점검) · `/review`(제3자 리뷰) ·
-`where-is-the-truth` 스킬(정본이 어디 있나). **훅 없음** — 기본 프로필이다.
+담는 것: `playbook` 스킬(어느 단계에서 무엇을 치나 — 아이디어에서 머지까지) · `/new-project`(벽이 선 저장소) ·
+`/floor-check`(기존 저장소 점검) · `/review`(제3자 리뷰 라우팅). **훅 없음** — 기본 프로필이다.
+
+🔵 **기획·스펙·티켓·구현·리뷰는 우리 스킬이 아니다** — [`mattpocock-skills`](https://github.com/mattpocock/skills)
+(`/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` → `/code-review`)를 의존성으로 켠다.
+2026-09-02 에 `/kickoff` 을 지웠다: `grill-with-docs` 가 인터뷰를 대체하고, 남는 넷(실수 목록 · AC↔검사 · "이미 있나" · 개인정보 hard-stop)은
+템플릿의 `AGENTS.md` 로 갔다(`standards` `audit/SKILL-OVERLAP`).
 
 ### 진입로 둘 — **새로 시작이냐, 이미 있느냐**
 
 | | 흐름 |
 |---|---|
-| **greenfield** | `/kickoff`(기획) → `/new-project`(저장소 + 서버 바닥) |
-| **brownfield** | `/kickoff`(기획을 **리뷰**) · `/floor-check`(설정을 **리뷰**) |
+| **greenfield** | `/new-project`(저장소 + 서버 바닥) → `/grill-with-docs`(기획) |
+| **brownfield** | `/floor-check`(설정을 **리뷰**) · `/grill-with-docs`(기획을 **리뷰**) |
 
 ### 🔴 누가 부를 수 있나 — **커맨드는 기본이 *모델도 부를 수 있음* 이다**
 
@@ -256,14 +260,14 @@ claude plugin install coolbress-standards@coolbress
 
 | 커맨드 | 모델이 부를 수 있나 | 왜 |
 |---|---|---|
-| `/kickoff` · `/floor-check` | ✅ | **묻거나 읽기만 한다.** 오히려 자동으로 떠야 값이 있다 |
+| `playbook` · `/floor-check` | ✅ | **묻거나 읽기만 한다.** 오히려 자동으로 떠야 값이 있다 |
 | **`/new-project`** | ❌ **사용자 전용** | **저장소를 만들고 관리자 토큰을 요구하며 실패하면 지운다.** 공식 문서의 `/deploy` 예시 그 자체 |
 | **`/review`** | ❌ **사용자 전용** | 외부 모델 호출은 **비용**이고, 🔴 **`/codex:review` 자체가 사용자 전용이라** 모델이 부르면 **막다른 길**로 간다 |
 
 ⚠️ **끄면 설명이 컨텍스트에서 빠진다** — 토큰은 줄지만 **모델이 그 커맨드의 존재를 모르게 된다.**
 그래서 **읽기 전용인 둘은 켜둔다.**
 
-🔴 **`무조건 /kickoff 먼저` 가 아니다.** **아주 작은 수정은 건너뛴다** —
+🔴 **`무조건 /grill-with-docs 먼저` 가 아니다.** **아주 작은 수정은 건너뛴다** —
 *"모든 변경에 이슈"* 를 요구하면 **사람이 규칙을 우회하기 시작한다**(`standards` `direction/04`).
 🔴 **이름을 나눈 이유**: `/new-project` 는 **저장소를 만들고 실패하면 지운다**.
 점검만 하는 일에 같은 이름을 쓰면 **이름이 거짓말한다.**

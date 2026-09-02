@@ -11,6 +11,10 @@ set -euo pipefail
 
 name="${1:?사용법: new-project.sh <이름> [--license=<spdx>]  (--private 는 미지원)}"; shift
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; vis=--public; lic=mit
+# 🔴 템플릿 판을 **하나로** 본다. 전판은 아키타입 목록을 `main` 에서 읽고 copier 는 **최신 태그**를
+# 썼다 — 한 실행이 템플릿을 두 시점으로 보는 창이 있었다(제3자 지적 2026-09-02).
+# 올릴 때는 이 값 하나만 바꾼다.
+template_ref="${TEMPLATE_REF:-v2.17.0}"
 for a in "$@"; do case "$a" in
   # 🔴 --private 는 **지금 지원하지 않는다.** 받는 척하면 안 된다.
   # 이유 둘: ① GitHub Free 는 비공개에 룰셋을 못 건다(Pro 필요)
@@ -77,7 +81,7 @@ arch="${arch:-cli}"
 # 그래서 **템플릿에서 읽어온다.** 못 읽으면 막지 않고 넘긴다 — copier 가 어차피 거부하고
 # trap 이 지운다. **여기서 죽이는 값을 여기가 정하지 않는다.**
 choices="$(
-  gh api repos/coolbress/project-template/contents/copier.yml --jq .content 2>/dev/null \
+  gh api "repos/coolbress/project-template/contents/copier.yml?ref=$template_ref" --jq .content 2>/dev/null \
     | base64 -d 2>/dev/null \
     | sed -n '/^archetype:/,/^[a-z_]/p' \
     | sed -n 's/^    [^:]*: \([a-z][a-z0-9-]*\)$/\1/p'
@@ -122,7 +126,7 @@ git -C "$name" symbolic-ref HEAD refs/heads/main
 #  바꿔놓은 뒤에야 걸렸다.)
 uvx --quiet copier copy --defaults --quiet \
   --data "project_name=$name" --data "license=$spdx" --data "archetype=$arch" \
-  "gh:coolbress/project-template" "$name" < /dev/null
+  --vcs-ref "$template_ref" "gh:coolbress/project-template" "$name" < /dev/null
 ( cd "$name" && git add -A && git commit -qm "chore: copier 로 템플릿에서 생성 ($arch)" )
 
 # 🔴 **푸시가 되는지 앞에서 확인한다.** 나머지를 다 하고 나서 알면 늦다 — 실제로 두 번 그렇게 실패했다(2026-08-27: 붙여넣기에 딸려온 공백 한 칸.
@@ -153,7 +157,7 @@ for lbl in feat fix docs style refactor perf test build ci chore revert breaking
 done
 
 # `task` 라벨. 🔴 **`bug`·`enhancement` 는 GitHub 기본 라벨이라 있는데 `task` 는 없다** —
-# 그래서 `task.yml` 폼만 라벨이 비어 있었다(2026-08-30 실측). `/kickoff` 이 만드는 과제가
+# 그래서 `task.yml` 폼만 라벨이 비어 있었다(2026-08-30 실측). 기획이 만드는 과제가
 # 버그 신고와 안 갈려서 `gh issue list` 로 *다음 할 일* 을 못 추린다.
 gh label create "task" --repo "coolbress/$name" --color 0052cc \
   --description "만들 것 하나 (인수기준이 검사에 매핑된다)" >/dev/null 2>&1 || true
@@ -172,6 +176,14 @@ gh label create "decision:escalation" --repo "coolbress/$name" --color b60205 \
   --description "막혔다 — 권한 없음 · 반복 실패" >/dev/null 2>&1 || true
 gh label create "needs-simpler" --repo "coolbress/$name" --color fbca04 \
   --description "다시 쉽게 설명해달라" >/dev/null 2>&1 || true
+
+# 🔴 mattpocock-skills 의 트리아지 라벨 다섯. `/to-spec` 이 `ready-for-agent` 를 다는데
+# **어느 스킬도 라벨을 만들지는 않는다** — 없으면 `gh issue create --label` 에서 죽는다
+# (실물 확인 2026-09-02 · 이름은 `docs/agents/triage-labels.md` 의 기본값과 같다).
+for lbl in needs-triage needs-info ready-for-agent ready-for-human wontfix; do
+  gh label create "$lbl" --repo "coolbress/$name" --color c5def5 \
+    --description "트리아지 (mattpocock-skills)" >/dev/null 2>&1 || true
+done
 
 # 템플릿은 MIT 본문을 싣고 온다. 고른 게 다르면 GitHub 공식 본문으로 바꾼다 (같으면 diff 가 없어 넘어간다).
 gh api "/licenses/$lic" --jq .body > "$name/LICENSE"
