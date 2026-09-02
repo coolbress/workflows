@@ -79,6 +79,14 @@ on:
 
 jobs:
   review:
+    # 🔴 **draft 에서는 안 본다 — 리뷰는 PR 당 한 번, ready 에서.** (2026-09-02 · `standards` R5-48 ②)
+    # 실측: 이 벽은 *이 커밋을 봤나* 를 묻기 때문에 **푸시마다** 리뷰가 다시 돌았다 — `#224` 29회 · 하루 76회 ·
+    # 그리고 새 푸시가 옛 실행(최대 900초)의 뒤에 줄을 서서 새 head 의 검사가 생기지도 않았다.
+    # Copilot 은 *"Review new pushes"* 토글, Matt 의 `code-review` 는 커밋 전 한 번 — 같은 것을 벽에 옮긴다.
+    # 고치는 자리는 로컬(draft), 확인하는 자리는 여기(ready). ready 뒤 푸시는 다시 본다 — 그게 "최종 커밋을 봤다" 다.
+    # ⚠️ draft 면 잡이 `skipped` 로 끝나고 룰셋은 skipped 를 통과로 센다 — 그래도 **draft 는 GitHub 이 머지를 막는다.**
+    #    ready 로 바꾸는 순간 `ready_for_review` 로 새 실행이 뜬다(호출자는 그 타입을 `on:` 에 넣어야 한다).
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
