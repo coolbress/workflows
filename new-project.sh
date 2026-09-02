@@ -14,7 +14,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; vis=--public; lic=mit
 # 🔴 템플릿 판을 **하나로** 본다. 전판은 아키타입 목록을 `main` 에서 읽고 copier 는 **최신 태그**를
 # 썼다 — 한 실행이 템플릿을 두 시점으로 보는 창이 있었다(제3자 지적 2026-09-02).
 # 올릴 때는 이 값 하나만 바꾼다.
-template_ref="${TEMPLATE_REF:-v2.17.0}"
+template_ref="${TEMPLATE_REF:-v2.18.0}"
 for a in "$@"; do case "$a" in
   # 🔴 --private 는 **지금 지원하지 않는다.** 받는 척하면 안 된다.
   # 이유 둘: ① GitHub Free 는 비공개에 룰셋을 못 건다(Pro 필요)
