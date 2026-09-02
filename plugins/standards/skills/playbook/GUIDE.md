@@ -2,14 +2,16 @@
 
 > `playbook` 스킬의 **참조 문서**다. `SKILL.md` 는 한 장 지도, 여기는 **현업 팀의 개발 워크플로**를 먼저 설명하고, **그 워크플로의 단계마다 · 상황마다** `mattpocock-skills` 의 어떤 스킬을 어떻게 치는지 예시까지 적은 판이다.
 > 근거: 현업 관행은 `coolbress/standards` 의 `direction/03`·`04`·`05`(리서치 코퍼스 · claim ID 병기) · 스킬은 `mattpocock-skills` 1.2.3 실물 35개 + 참조 파일 · Matt 의 공식 문서(aihero.dev) · 2026-08 시중 후기.
-> 원칙은 하나다 — **강제는 GitHub 벽만 한다. 이 문서는 전부 "이렇게 하면 좋아요" 다.**
+> 원칙은 하나다 — **산출물의 인수 강제는 GitHub 벽만 한다. 이 문서는 전부 "이렇게 하면 좋아요" 다.** 로컬 실행 피해(비밀 읽기 · force push · `rm -rf`)는 템플릿의 `.claude/settings.json` deny 가 막는다 — 벽은 그걸 되돌려주지 못한다.
+> 지원 범위(증명된 것): **공개 GitHub · Python · greenfield · 단일 소유자.** 비공개 · 웹/Node · 기존 대형 저장소 · 외부 설치자 · 시니어 인수는 미검증이다 — 구조의 실패가 아니라 성숙도 표시.
 
 ## 0. 읽기 전에
 
 | | |
 |---|---|
 | 깔려 있는 것 | `mattpocock-skills`(공식 마켓 · SHA 핀) · 우리 플러그인(문 둘 + 이 지도) · 벽(`coolbress/workflows`) · 상자(`coolbress/project-template`) |
-| 우리가 만든 것 | `/new-project` · `/floor-check` · `playbook`. **그게 다다.** 기획·설계·스펙·티켓·구현·리뷰는 전부 Matt 의 스킬 |
+| 우리가 만든 것 | `/new-project` · `/floor-check` · `playbook` — **진입과 문만.** 기획·설계·스펙·티켓·구현·리뷰 같은 **작업 스킬은 만들지 않고 재사용**한다 |
+| Matt 의 스킬은 무엇인가 | "시니어가 이미 해결했다" 가 아니라 **우리가 검토하고 핀한 외부 워크플로 의존성**이다. 판이 올라가 이름·산출물 형식이 바뀌면 이 문서와 갈릴 수 있다 — `tests/playbook-skill-names.sh` 가 이름을, 깨끗한 설치 시험이 나머지를 잡는다 |
 | 외울 것 | `/ask-matt`(뭘 쳐야 하지) · `/grill-with-docs`(새로 만들자) · `/implement #N`(티켓이 있다) |
 | **사용자 전용** (`/` 로 당신이 친다) | `grill-with-docs` `grill-me` `to-spec` `to-tickets` `implement` `wayfinder` `triage` `improve-codebase-architecture` `handoff` `wait-what` `to-questionnaire` `teach` `ask-matt` `setup-matt-pocock-skills` |
 | **모델이 알아서 꺼낸다** | `grilling` `domain-modeling` `codebase-design` `tdd` `code-review` `prototype` `research` `diagnosing-bugs` `resolving-merge-conflicts` `wizard` `writing-for-agents` |
@@ -251,7 +253,7 @@ $ gh pr create --fill --draft                    ← ②  CI 는 돈다, 제3자
 $ gh pr ready                                    ← ③  "다 됐다" — 제3자가 이 커밋을 한 번 본다
 ```
 
-draft 동안은 몇 번 푸시해도 제3자 리뷰가 안 돈다. ready 뒤 푸시하면 다시 본다(2회이지 29회가 아니다). 더 손볼 게 많으면 `gh pr ready --undo`. 리뷰 지적은 **P0·P1 만 처분 의무** — 고쳤다 / 재현 불가 / 범위 밖. *"봤다"* 는 벽이 보증하고 *"읽었다"* 는 당신 몫이다.
+리뷰 단위는 PR 이 아니라 **ready 상태의 HEAD** 다 — draft 에서 0회, ready HEAD 마다 1회. ready 뒤 푸시하면 그 HEAD 는 새 리뷰 대상이다(보통 1~2회, 29회가 아니다). 더 손볼 게 많으면 `gh pr ready --undo`. 리뷰 지적은 **P0·P1 만 처분 의무** — 고쳤다 / 재현 불가 / 범위 밖. *"봤다"* 는 벽이 보증하고 *"읽었다"* 는 당신 몫이다.
 
 ### ⑦ 판정 · 머지 — 벽
 
@@ -259,7 +261,7 @@ draft 동안은 몇 번 푸시해도 제3자 리뷰가 안 돈다. ready 뒤 푸
 
 **우리는**: PR 을 열면 `ci / lint · typecheck · test · build · secrets · diff-size · deps`(각각 required) 와 `third-party / review` 가 돈다. **소유자 `--admin` 도 거부된다.** 초록이면 squash 머지 — 이슈는 `Closes #1` 로 자동 종료, 브랜치는 자동 삭제.
 
-**내가 정하는 것**: 머지 버튼. 그게 전부다.
+**내가 정하는 것**: 머지 버튼 — 그리고 구현 중 **범위 · 위험 · 비용 · AC 가 달라지면** 그 결정. 구현 *방법*은 에이전트가 정한다.
 
 ```
 > 빨간불이야. `ci / typecheck` 가 실패했어.
@@ -423,7 +425,7 @@ Matt 의 스킬은 에이전트 안쪽에 살고 커밋에서 끝나며 판정�
 - **라벨** — `ready-for-agent` 등 5개를 `new-project.sh` 가 만든다. 어느 스킬도 안 만든다
 - **`CONTRIBUTING.md`** — `code-review` 의 Standards 축이 읽는다. 상자가 주고 시험이 내용을 지킨다
 - **`AGENTS.md` §기획할 때** — 이미 있나 · 유도 질문 금지 · 안 만들 것 · 개인정보 hard-stop. 인터뷰가 도는 세션에 이미 로드돼 있다
-- **리뷰는 PR 당 한 번** — draft 에서 고치고 ready 에서 본다. `standards` 는 advisory, 제품 저장소는 벽
+- **리뷰는 ready HEAD 마다 한 번** — draft 에서 고치고 ready 에서 본다. `standards` 는 advisory, 제품 저장소는 벽
 
 ## 근거
 
