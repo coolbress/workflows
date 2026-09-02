@@ -9,7 +9,8 @@ name: third-party
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    # `ready_for_review` — draft 에서는 안 보고(재사용 워크플로의 `if`), ready 로 바뀌는 순간 한 번 본다.
+    types: [opened, synchronize, reopened, ready_for_review]
   pull_request_review:
     types: [submitted]
 
