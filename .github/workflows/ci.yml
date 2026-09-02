@@ -104,6 +104,11 @@ jobs:
       # 잠그는 게 아니라 **푸는 것**이다 — 그 혼동이 들어오는 것도 막는다.
       - name: 플러그인 매니페스트 (읽기전용 집행 · 버전 일치 · SHA 핀)
         run: ./tests/plugin-manifests.sh
+
+      # 🔴 Matt 는 스킬 이름을 바꾼다(`to-prd` → `to-spec`). 공식 마켓이 판을 올리면 우리 플레이북이
+      # **없는 커맨드를 가리키는데 아무것도 안 빨개진다** — 그 침묵을 여기서 빨강으로. 마켓 핀으로 clone 해 대조.
+      - name: 플레이북이 가리키는 스킬이 실제로 있나 (mattpocock-skills 드리프트)
+        run: ./tests/playbook-skill-names.sh
       - name: 룰셋 갱신 — 이름 가드 (오지 않을 검사를 요구하면 머지 불가가 된다)
         run: ./tests/upgrade-ruleset-guard.sh
 
