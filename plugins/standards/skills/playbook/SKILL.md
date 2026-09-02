@@ -23,7 +23,7 @@ description: 프로젝트를 어느 단계에서 무엇을 치며 진행하나 �
 | 1 | 생각 | `/grill-with-docs` + 아이디어 한 줄 | 라운드별 질문(추천 답 포함) · `CONTEXT.md` · 필요하면 ADR | **결정 전부** — 사실은 에이전트, 결정은 사람 | *frontier 가 비었다 · shared understanding* |
 | 2 | 스펙 | `/to-spec` | 이슈 하나 (문제 · 해법 · 유저 스토리 · 구현·테스트 결정 · 범위 밖) | 테스트할 seam | 이슈에 `ready-for-agent` |
 | 3 | 티켓 | `/to-tickets` | 수직 슬라이스 이슈들 + Blocked by | 굵기 · 순서 | 티켓들이 이슈 목록에 있다 |
-| 4 | 만들기 (티켓마다) | `/clear` → 브랜치 → `/implement #N` → PR | tdd 로 구현 · 자기 code-review · 커밋 → 벽이 돈다 | 없음 — 머지 버튼만 | CI 초록 · 제3자 리뷰 · 머지 |
+| 4 | 만들기 (티켓마다) | `/clear` → 브랜치 → `/implement #N` → **draft PR** → `gh pr ready` | tdd 로 구현 · 자기 code-review · 커밋 → CI 가 돈다 → ready 에서 제3자가 **한 번** 본다 | 없음 — 머지 버튼만 | CI 초록 · 제3자 리뷰 · 머지 |
 | 5 | 다시 열 때 | "계속하자" | 열린 이슈를 읽고 막힘 없는 첫 티켓부터 | 없음 | — |
 
 **작으면 2·3 을 건너뛴다** — 한 세션에 들어가면 `/grill-with-docs` 뒤 바로 `/implement`.
@@ -37,12 +37,16 @@ description: 프로젝트를 어느 단계에서 무엇을 치며 진행하나 �
 > /clear
 $ git switch -c feat/<티켓-슬러그>      ← ①
 > /implement #12
-$ gh pr create --fill                   ← ②
+$ gh pr create --fill --draft           ← ②  CI 는 돈다, 제3자 리뷰는 아직 안 돈다
+   … 빨간불 고치기 · 로컬 code-review 로 다듬기 · 푸시 …
+$ gh pr ready                           ← ③  "다 됐다" — 제3자가 이 커밋을 한 번 본다
 ```
 
-PR 을 열면 `ci / lint·typecheck·test·build·secrets·diff-size·deps` 와 `third-party / review` 가 돈다.
+**고치는 자리는 draft, 확인하는 자리는 ready.** draft 동안은 몇 번 푸시해도 제3자 리뷰가 안 돈다 —
+벽의 계약이 *최종 커밋을 봤다* 라서 ready 뒤에 푸시하면 다시 본다(2회이지 29회가 아니다).
+더 손볼 게 많으면 `gh pr ready --undo` 로 되돌린다.
 빨간불이면 머지가 안 된다. 리뷰 지적은 P0·P1 만 처분 의무(고쳤다 / 재현 불가 / 범위 밖).
-**티켓 하나 = 세션 하나 = PR 하나.**
+**티켓 하나 = 세션 하나 = PR 하나 = 제3자 리뷰 한 번.**
 
 ## 곁길
 
